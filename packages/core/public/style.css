@@ -1,0 +1,288 @@
+:root {
+  --bg: #f5f4ef;
+  --fg: #1d1d1b;
+  --muted: #7a7a72;
+  --panel: rgba(255, 255, 255, 0.85);
+  --border: #d8d6cc;
+  --done: #2e9e5b;
+}
+
+:root:not([data-theme="light"]) {
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15161a;
+    --fg: #ececea;
+    --muted: #9a9a92;
+    --panel: rgba(30, 31, 36, 0.85);
+    --border: #33353c;
+    --done: #3fbf74;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #15161a;
+  --fg: #ececea;
+  --muted: #9a9a92;
+  --panel: rgba(30, 31, 36, 0.85);
+  --border: #33353c;
+  --done: #3fbf74;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+#scene {
+  position: absolute;
+  inset: 0;
+}
+
+body.embed #pipeline,
+body.embed #hud,
+body.embed .session-picker {
+  display: none;
+}
+
+#pipeline {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  z-index: 2;
+  max-width: calc(100% - 32px);
+  justify-content: center;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  padding: 3px 7px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+}
+
+.step .name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.step .state {
+  font-size: 11px;
+  color: var(--muted);
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.step.working { border-color: currentColor; }
+.step.done .state { color: var(--done); }
+
+/* Each step gets its desk colour from app.js. */
+
+.arrow {
+  color: var(--muted);
+}
+
+#tags {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tag {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+
+.tag .done-tick {
+  color: var(--done);
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.tag {
+  left: 0;
+  top: 0;
+}
+
+.tag.lead {
+  background: #1f3a5f;
+  color: #ffffff;
+  border-color: #6f93c9;
+  font-weight: 600;
+}
+
+.bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: 260px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--bubble-bg, #ffffff);
+  color: var(--bubble-fg, #1d1d1b);
+  border: 2px solid #1f3a5f;
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.bubble.show {
+  opacity: 1;
+}
+
+.bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -9px;
+  width: 14px;
+  height: 14px;
+  background: var(--bubble-bg, #ffffff);
+  border-style: solid;
+  border-width: 2px 0 0 2px;
+  border-color: inherit;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.bubble .line2 {
+  margin-top: 2px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 11px;
+  color: #5c5c55;
+}
+
+#hud {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  z-index: 2;
+  max-width: calc(100% - 32px);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.progress {
+  width: 140px;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+#progress-bar {
+  height: 100%;
+  width: 0;
+  background: var(--done);
+  transition: width 0.3s ease;
+}
+
+button {
+  font: inherit;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  #hud {
+    gap: 10px;
+  }
+  .progress {
+    width: 80px;
+  }
+}
+
+/* Session picker, top-right corner. Only shown when more than one Claude Code session is watched. */
+.session-picker {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.session-picker select {
+  font: inherit;
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .session-picker {
+    top: auto;
+    bottom: 70px;
+    right: 12px;
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "it-office-3d",
+  "owner": {
+    "name": "kob ai"
+  },
+  "description": "A live 3D view of your Claude Code session.",
+  "plugins": [
+    {
+      "name": "it-office-3d",
+      "source": ".",
+      "description": "Watch what Claude Code is doing as a live 3D scene. Local only, read only.",
+      "version": "0.2.1",
+      "category": "monitoring",
+      "tags": [
+        "visualization",
+        "3d",
+        "hooks"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "name": "claude-code-3d",
+  "displayName": "Claude Code 3D",
+  "description": "Watch what Claude Code is doing as a live 3D scene in a VS Code panel. Local only, read only.",
+  "version": "0.3.1",
+  "publisher": "gotanel1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gotanel1/it-office-3d"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "claudeCode3d",
+          "title": "Claude 3D",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "claudeCode3d": [
+        {
+          "type": "webview",
+          "id": "claudeCode3d.scene",
+          "name": "Office"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "claudeCode3d.open",
+        "title": "Open",
+        "category": "Claude Code 3D"
+      },
+      {
+        "command": "claudeCode3d.reset",
+        "title": "Reset",
+        "category": "Claude Code 3D",
+        "icon": "$(clear-all)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "claudeCode3d.reset",
+          "when": "view == claudeCode3d.scene",
+          "group": "navigation@1"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "node scripts/copy-core.mjs",
+    "package": "npx --yes @vscode/vsce@4.0.0 package --no-dependencies",
+    "test": "node --test \"test/*.test.js\""
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "it-office-3d",
+  "version": "0.2.1",
+  "description": "Watch what Claude Code is doing as a live 3D IT department: a PM hands out tasks to ten chibi desks, from BA and SA to QA, DevOps and the tech writer. Local only, read only.",
+  "author": {
+    "name": "kob ai"
+  },
+  "license": "MIT",
+  "keywords": [
+    "visualization",
+    "3d",
+    "hooks",
+    "monitor"
+  ],
+  "homepage": "https://github.com/gotanel1/it-office-3d",
+  "repository": "https://github.com/gotanel1/it-office-3d"
+}

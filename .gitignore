@@ -1,0 +1,8 @@
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+vscode/core/
+vscode/LICENSE
+vscode/THIRD-PARTY-NOTICES.md
+*.vsix
