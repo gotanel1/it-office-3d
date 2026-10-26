@@ -75,6 +75,6 @@
   "scripts": {
     "vscode:prepublish": "node scripts/copy-core.mjs",
     "package": "npx --yes @vscode/vsce@4.0.0 package --no-dependencies",
-    "test": "node --test \"test/*.test.js\""
+    "test": "node --test test/status.test.js"
   }
 }

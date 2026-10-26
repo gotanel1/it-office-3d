@@ -11,7 +11,7 @@
   "scripts": {
     "start": "node src/cli.js",
     "demo": "node scripts/demo.js",
-    "test": "node --test \"test/*.test.js\"",
+    "test": "node --test test/logic.test.js test/server.test.js",
     "vendor": "node scripts/vendor.mjs"
   },
   "devDependencies": {
