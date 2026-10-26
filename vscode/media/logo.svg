@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e3a8a"/>
+      <stop offset="1" stop-color="#0b1226"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <ellipse cx="128" cy="218" rx="74" ry="14" fill="#000" opacity="0.35"/>
+  <!-- An isometric office block: "IT" on the roof, lit windows on the walls. -->
+  <path d="M60 103 128 142v72L60 175z" fill="#2563eb"/>
+  <path d="M128 142 196 103v72l-68 39z" fill="#1d4ed8"/>
+  <path d="M60 103 128 64l68 39-68 39z" fill="#60a5fa"/>
+  <path d="M60 103 128 64l68 39-68 39z" fill="none" stroke="#bfdbfe" stroke-width="3" stroke-linejoin="round"/>
+  <g transform="matrix(0.68 0.39 0 0.72 60 103)" fill="#fde68a">
+    <rect x="16" y="18" width="26" height="22" rx="3"/>
+    <rect x="58" y="18" width="26" height="22" rx="3"/>
+    <rect x="16" y="56" width="26" height="22" rx="3" opacity="0.45"/>
+    <rect x="58" y="56" width="26" height="22" rx="3"/>
+  </g>
+  <g transform="matrix(0.68 -0.39 0 0.72 128 142)" fill="#fde68a">
+    <rect x="16" y="18" width="26" height="22" rx="3" opacity="0.45"/>
+    <rect x="58" y="18" width="26" height="22" rx="3"/>
+    <rect x="16" y="56" width="26" height="22" rx="3"/>
+    <rect x="58" y="56" width="26" height="22" rx="3" opacity="0.45"/>
+  </g>
+  <g transform="matrix(0.68 -0.39 0.68 0.39 60 103)">
+    <text x="50" y="71" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="800" font-size="58" fill="#0b1226">IT</text>
+  </g>
+</svg>

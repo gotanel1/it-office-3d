@@ -1,4 +1,4 @@
-# Claude Code 3D
+# IT-Office-3D
 
 **Watch what Claude Code is doing as a live 3D scene.**
 A whole IT department of chibi characters (BA, SA, architect, UX/UI, developer, DBA, QA, DevOps, security and a tech writer) gets work handed out by a PM who walks between the desks, while a timer and a token counter run along the bottom.
@@ -121,17 +121,17 @@ By default the plugin is installed for you in every project (`user` scope). To l
 
 ### Watch inside VS Code instead of a browser
 
-A small VS Code extension shows the same scene in a **Claude 3D** panel next to Terminal, with live status in the status bar. You need VS Code 1.85 or newer, and the plugin from method A or B: the plugin reports Claude's work, the extension only shows it.
+A small VS Code extension shows the same scene in a **IT-Office-3D** panel next to Terminal, with live status in the status bar. You need VS Code 1.85 or newer, and the plugin from method A or B: the plugin reports Claude's work, the extension only shows it.
 
-1. In VS Code open the Extensions view (`Ctrl+Shift+X`, or `Cmd+Shift+X` on macOS), search for **Claude Code 3D** by **gotanel1**, and click **Install**. Or open its [Marketplace page](https://marketplace.visualstudio.com/items?itemName=gotanel1.claude-code-3d), or run `code --install-extension gotanel1.claude-code-3d` in a terminal.
+1. In VS Code open the Extensions view (`Ctrl+Shift+X`, or `Cmd+Shift+X` on macOS), search for **IT-Office-3D** by **gotanel1**, and click **Install**. Or open its [Marketplace page](https://marketplace.visualstudio.com/items?itemName=gotanel1.claude-code-3d), or run `code --install-extension gotanel1.claude-code-3d` in a terminal.
 2. VS Code updates it by itself when a new version comes out.
 
    Using Cursor, Antigravity or another editor without the VS Code Marketplace? Download the `.vsix` from the [Releases page](https://github.com/gotanel1/it-office-3d/releases/latest) instead, press `Ctrl+Shift+P`, run **Extensions: Install from VSIX...** and pick the file. Installed this way it does not update itself.
 3. Press `Ctrl+Shift+P`, run **Reload Window**.
-4. Click **Claude 3D** in the status bar (bottom right), or open the **Claude 3D** tab next to Terminal.
+4. Click **IT-Office-3D** in the status bar (bottom right), or open the **IT-Office-3D** tab next to Terminal.
 5. Start a **new** Claude Code chat and give it a task. The characters move and the status bar shows who is working, for example `QA · Run the core test suite`.
 
-To remove it: open the Extensions view, find **Claude Code 3D**, and click **Uninstall**. To build the `.vsix` yourself, see [vscode/README.md](vscode/README.md).
+To remove it: open the Extensions view, find **IT-Office-3D**, and click **Uninstall**. To build the `.vsix` yourself, see [vscode/README.md](vscode/README.md).
 
 ### C. Try it first without installing anything
 

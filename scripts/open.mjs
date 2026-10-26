@@ -22,11 +22,11 @@ function openBrowser(url) {
 
 const info = await ensureServer({ wait: 8000 });
 if (!info) {
-  console.log('Claude Code 3D could not start its local server. Make sure Node.js 18 or newer is installed, then try again.');
+  console.log('IT-Office-3D could not start its local server. Make sure Node.js 18 or newer is installed, then try again.');
   process.exit(1);
 }
 
 const url = info.url;
-console.log(`Claude Code 3D is running at ${url}`);
+console.log(`IT-Office-3D is running at ${url}`);
 if (!noOpen) openBrowser(url);
 process.exit(0);

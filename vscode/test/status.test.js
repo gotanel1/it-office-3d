@@ -17,8 +17,8 @@ const DESKS = ['BA', 'SA', 'Architect', 'UX', 'Dev', 'DBA', 'QA', 'DevOps', 'Sec
 const roles = (overrides = {}) => ({ ...Object.fromEntries(DESKS.map((d) => [d, idle])), ...overrides });
 
 test('no server or no task shows the plain label', () => {
-  assert.equal(describe(null).text, '$(eye) Claude 3D');
-  assert.equal(describe(snapshot({ roles: roles(), startedAt: null })).text, '$(eye) Claude 3D');
+  assert.equal(describe(null).text, '$(eye) IT-Office-3D');
+  assert.equal(describe(snapshot({ roles: roles(), startedAt: null })).text, '$(eye) IT-Office-3D');
 });
 
 test('a running tool shows its role and tool', () => {
@@ -37,7 +37,7 @@ test('a finished turn shows the token total', () => {
     endedAt: 8000,
     tokens: { input: 18, output: 281, cacheRead: 64456, cacheWrite: 25756 },
   });
-  assert.equal(describe(s).text, '$(check) Claude 3D · 25.8k in / 281 out');
+  assert.equal(describe(s).text, '$(check) IT-Office-3D · 25.8k in / 281 out');
   assert.match(describe(s).tooltip.value, /7s/);
 });
 

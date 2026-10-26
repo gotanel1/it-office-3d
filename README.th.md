@@ -1,4 +1,4 @@
-# Claude Code 3D
+# IT-Office-3D
 
 **ดูว่า Claude Code กำลังทำอะไรอยู่ เป็นฉาก 3D แบบสดๆ**
 แผนก IT ทั้งแผนกในรูปตัวละคร chibi (BA, SA, Architect, UX/UI, Dev, DBA, QA, DevOps, Security และ Tech Writer) มี PM เดินจ่ายงานไปตามโต๊ะ พร้อมตัวจับเวลาและตัวนับ token อยู่ด้านล่าง
@@ -125,17 +125,17 @@ claude plugin list
 
 ### ดูใน VS Code แทนเบราว์เซอร์
 
-มี extension เล็กๆ ของ VS Code ที่แสดงฉากเดียวกันในแผง **Claude 3D** ข้าง Terminal และแสดงสถานะสดบน status bar ต้องใช้ VS Code 1.85 ขึ้นไป และต้องติดตั้ง plugin ตามวิธี A หรือ B ด้วย เพราะ plugin เป็นตัวส่งข้อมูลการทำงานของ Claude ส่วน extension แค่แสดงผล
+มี extension เล็กๆ ของ VS Code ที่แสดงฉากเดียวกันในแผง **IT-Office-3D** ข้าง Terminal และแสดงสถานะสดบน status bar ต้องใช้ VS Code 1.85 ขึ้นไป และต้องติดตั้ง plugin ตามวิธี A หรือ B ด้วย เพราะ plugin เป็นตัวส่งข้อมูลการทำงานของ Claude ส่วน extension แค่แสดงผล
 
-1. ใน VS Code เปิดหน้า Extensions (`Ctrl+Shift+X` หรือ macOS กด `Cmd+Shift+X`) ค้นหา **Claude Code 3D** ของ **gotanel1** แล้วกด **Install** หรือเปิด[หน้า Marketplace](https://marketplace.visualstudio.com/items?itemName=gotanel1.claude-code-3d) หรือรัน `code --install-extension gotanel1.claude-code-3d` ใน terminal
+1. ใน VS Code เปิดหน้า Extensions (`Ctrl+Shift+X` หรือ macOS กด `Cmd+Shift+X`) ค้นหา **IT-Office-3D** ของ **gotanel1** แล้วกด **Install** หรือเปิด[หน้า Marketplace](https://marketplace.visualstudio.com/items?itemName=gotanel1.claude-code-3d) หรือรัน `code --install-extension gotanel1.claude-code-3d` ใน terminal
 2. เมื่อมีเวอร์ชันใหม่ VS Code จะอัปเดตให้เอง
 
    ใช้ Cursor, Antigravity หรือ editor อื่นที่ไม่มี VS Code Marketplace? ให้ดาวน์โหลดไฟล์ `.vsix` จาก[หน้า Releases](https://github.com/gotanel1/it-office-3d/releases/latest) แทน แล้วกด `Ctrl+Shift+P` เลือก **Extensions: Install from VSIX...** และเลือกไฟล์ ติดตั้งแบบนี้จะไม่อัปเดตเอง
 3. กด `Ctrl+Shift+P` แล้วเลือก **Reload Window**
-4. กดปุ่ม **Claude 3D** ที่ status bar (มุมขวาล่าง) หรือเปิดแท็บ **Claude 3D** ข้าง Terminal
+4. กดปุ่ม **IT-Office-3D** ที่ status bar (มุมขวาล่าง) หรือเปิดแท็บ **IT-Office-3D** ข้าง Terminal
 5. เปิดแชท Claude Code **ใหม่** แล้วสั่งงาน ตัวละครจะขยับ และ status bar จะบอกว่าใครกำลังทำอะไร เช่น `QA · Run the core test suite`
 
-ถอนการติดตั้ง: เปิดหน้า Extensions หา **Claude Code 3D** แล้วกด **Uninstall** ถ้าอยากสร้างไฟล์ `.vsix` เอง ดู [vscode/README.md](vscode/README.md)
+ถอนการติดตั้ง: เปิดหน้า Extensions หา **IT-Office-3D** แล้วกด **Uninstall** ถ้าอยากสร้างไฟล์ `.vsix` เอง ดู [vscode/README.md](vscode/README.md)
 
 ### วิธี C: ลองก่อนโดยไม่ติดตั้ง
 

@@ -1,5 +1,5 @@
 ---
-description: Open the Claude Code 3D office in your browser (option: --no-open)
+description: Open the IT-Office-3D scene in your browser (option: --no-open)
 allowed-tools: Bash(node:*)
 ---
 

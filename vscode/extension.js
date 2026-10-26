@@ -1,4 +1,4 @@
-// Shows the Claude Code 3D scene inside VS Code instead of a browser.
+// Shows the IT-Office-3D scene inside VS Code instead of a browser.
 // The scene is the same local page the plugin serves, shown in a panel view with only the 3D scene;
 // status and reset live in VS Code's own UI. Events still come from the plugin's hooks.
 const vscode = require('vscode');
@@ -78,18 +78,18 @@ class SceneView {
   async load() {
     const view = this.view;
     if (!view) return;
-    view.webview.html = page('<p>Starting Claude Code 3D…</p>');
+    view.webview.html = page('<p>Starting IT-Office-3D…</p>');
     const info = await ensureServer();
     if (view !== this.view) return;
     if (!info) {
-      view.webview.html = page('<p>Claude Code 3D could not start its local server. Close and reopen this view to try again.</p>');
+      view.webview.html = page('<p>IT-Office-3D could not start its local server. Close and reopen this view to try again.</p>');
       return;
     }
     // shortcut: works for local VS Code only; remote windows forward the port under another host, which the
     // server's Host check refuses. Upgrade by letting the server accept the forwarded host if remote is needed.
     const base = (await vscode.env.asExternalUri(vscode.Uri.parse(info.url))).toString();
     const url = `${base}?embed`;
-    view.webview.html = page(`<iframe src="${url}" title="Claude Code 3D"></iframe>`, new URL(base).origin);
+    view.webview.html = page(`<iframe src="${url}" title="IT-Office-3D"></iframe>`, new URL(base).origin);
   }
 }
 
@@ -102,7 +102,7 @@ function formatTokens(n) {
 // One line in the status bar: who is working on what, or the token total once the turn is over.
 function describe(snap) {
   const session = snap?.active ? snap.sessions[snap.active] : null;
-  if (!session?.startedAt) return { text: '$(eye) Claude 3D', tooltip: 'Open the Claude Code 3D office' };
+  if (!session?.startedAt) return { text: '$(eye) IT-Office-3D', tooltip: 'Open the IT-Office-3D scene' };
   const t = session.tokens;
   const tokens = t ? `${formatTokens(t.input + t.cacheWrite)} in / ${formatTokens(t.output)} out` : 'tokens —';
   const seconds = Math.round(((session.endedAt ?? Date.now()) - session.startedAt) / 1000);
@@ -117,9 +117,9 @@ function describe(snap) {
     });
   if (lines.length === 0) lines.push('No desk busy');
   const tooltip = new vscode.MarkdownString(
-    [...lines, '', `${seconds}s · ${tokens}`, '', 'Click to open the Claude Code 3D office'].map((l) => l.replace(/[\\`*_[\]<>]/g, '\\$&')).join('  \n'),
+    [...lines, '', `${seconds}s · ${tokens}`, '', 'Click to open the IT-Office-3D scene'].map((l) => l.replace(/[\\`*_[\]<>]/g, '\\$&')).join('  \n'),
   );
-  if (session.endedAt || working.length === 0) return { text: `$(check) Claude 3D · ${tokens}`, tooltip };
+  if (session.endedAt || working.length === 0) return { text: `$(check) IT-Office-3D · ${tokens}`, tooltip };
   const [role, r] = working[0];
   // Claude's own summary of the call, when it gave one, says more than the tool name.
   const what = r.note && r.note.length > 40 ? `${r.note.slice(0, 39)}…` : r.note ?? r.tool;
@@ -158,7 +158,7 @@ async function reset() {
   try {
     await fetch(`http://127.0.0.1:${info.port}/reset`, { method: 'POST', signal: AbortSignal.timeout(1000) });
   } catch {
-    vscode.window.showWarningMessage('Claude Code 3D: the local server did not answer.');
+    vscode.window.showWarningMessage('IT-Office-3D: the local server did not answer.');
   }
 }
 

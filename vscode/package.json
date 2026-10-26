@@ -1,8 +1,9 @@
 {
   "name": "claude-code-3d",
-  "displayName": "Claude Code 3D",
+  "displayName": "IT-Office-3D",
   "description": "Watch what Claude Code is doing as a live 3D scene in a VS Code panel. Local only, read only.",
-  "version": "0.3.1",
+  "version": "0.3.2",
+  "icon": "media/logo.png",
   "publisher": "gotanel1",
   "license": "MIT",
   "repository": {
@@ -24,7 +25,7 @@
       "panel": [
         {
           "id": "claudeCode3d",
-          "title": "Claude 3D",
+          "title": "IT-Office-3D",
           "icon": "media/icon.svg"
         }
       ]
@@ -42,12 +43,12 @@
       {
         "command": "claudeCode3d.open",
         "title": "Open",
-        "category": "Claude Code 3D"
+        "category": "IT-Office-3D"
       },
       {
         "command": "claudeCode3d.reset",
         "title": "Reset",
-        "category": "Claude Code 3D",
+        "category": "IT-Office-3D",
         "icon": "$(clear-all)"
       }
     ],
