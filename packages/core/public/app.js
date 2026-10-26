@@ -225,7 +225,7 @@ for (const z of [-2.9, 2.2]) {
   box(room, [0.2, 0.06, 2.1], 0xffffff, [x + 0.1, 1.5, z], { cast: false });
 }
 
-// Department sign across the back wall.
+// Department sign on the left of the back wall; the middle holds the status screen.
 {
   const canvas = makeCanvas(1024, 160);
   const g = canvas.getContext('2d');
@@ -242,14 +242,14 @@ for (const z of [-2.9, 2.2]) {
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillText('IT DEPARTMENT', 512, 66);
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 1.0), new THREE.MeshBasicMaterial({ map: canvasTexture(canvas), transparent: true, toneMapped: false }));
-  sign.position.set(-1.6, 3.9, ROOM_Z_BACK + 0.02);
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 0.625), new THREE.MeshBasicMaterial({ map: canvasTexture(canvas), transparent: true, toneMapped: false }));
+  sign.position.set(-6.1, 4.15, ROOM_Z_BACK + 0.02);
   room.add(sign);
 }
 
-// Wall clock next to the sign. Hands follow real time.
+// Wall clock on the right of the screen. Hands follow real time.
 const clockGroup = new THREE.Group();
-clockGroup.position.set(3.4, 3.9, ROOM_Z_BACK + 0.05);
+clockGroup.position.set(5.6, 4.0, ROOM_Z_BACK + 0.05);
 room.add(clockGroup);
 {
   const ring = addMesh(clockGroup, new THREE.CylinderGeometry(0.4, 0.4, 0.08, 32), material(0x2b2e36), [0, 0, 0], { cast: false });
@@ -726,6 +726,90 @@ function drawBoard() {
   boardTexture.needsUpdate = true;
 }
 
+// ---------- status screen on the back wall ----------
+
+// One big screen for what is happening now, so the panel in VS Code (which hides the top bar) still
+// says it in words: the busy desk, Claude's summary of the call, and the file or command.
+const SCREEN_W = 1024;
+const SCREEN_H = 400;
+const screenCanvas = makeCanvas(SCREEN_W, SCREEN_H);
+const screenTexture = canvasTexture(screenCanvas);
+{
+  rbox(room, [6.65, 2.85, 0.12], 0x1b1d23, [0, 3.55, ROOM_Z_BACK + 0.06], 0.05, { cast: false });
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 2.5), new THREE.MeshBasicMaterial({ map: screenTexture, toneMapped: false }));
+  screen.position.set(0, 3.55, ROOM_Z_BACK + 0.125);
+  room.add(screen);
+}
+
+function formatTokens(n) {
+  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}k`;
+  return String(Math.round(n));
+}
+
+function drawScreen() {
+  const g = screenCanvas.getContext('2d');
+  const session = currentSession();
+  const busy = ROLES.filter((role) => roleState(role.id).state === 'working');
+  const role = busy[0];
+  const r = role ? roleState(role.id) : null;
+  const ended = Boolean(session?.endedAt);
+  const elapsed = session?.startedAt ? formatElapsed((session.endedAt ?? Date.now()) - session.startedAt) : '00:00';
+
+  const [accent, title, chip] = role
+    ? [role.css, `${role.label} · ${role.title}`, 'WORKING']
+    : ended
+      ? ['#3fbf74', 'Task finished', 'DONE']
+      : ['#5b6170', 'IT-Office-3D', 'WAITING'];
+
+  g.fillStyle = '#0f1116';
+  g.fillRect(0, 0, SCREEN_W, SCREEN_H);
+  g.fillStyle = accent;
+  g.fillRect(0, 0, SCREEN_W, 86);
+  g.textBaseline = 'middle';
+  g.textAlign = 'left';
+  g.fillStyle = '#ffffff';
+  g.font = `800 44px ${FONT}`;
+  g.fillText(truncate(title, 30), 32, 44);
+  g.textAlign = 'right';
+  g.font = `700 30px ${FONT}`;
+  g.fillText(`${chip}  ${elapsed}`, SCREEN_W - 32, 44);
+  g.textAlign = 'left';
+
+  if (role) {
+    // Claude's own summary when it gave one, otherwise the tool name.
+    g.fillStyle = '#ffffff';
+    g.font = `700 58px ${FONT}`;
+    g.fillText(truncate(r.note ?? r.tool, 30), 32, 152);
+    g.fillStyle = '#9aa3b5';
+    g.font = `500 32px ui-monospace, Consolas, monospace`;
+    g.fillText(truncate(`${r.tool}${r.detail ? ` · ${r.detail}` : ''}`, 46), 32, 214);
+    if (busy.length > 1) {
+      g.textAlign = 'right';
+      g.fillText(`+${busy.length - 1} more`, SCREEN_W - 32, 202);
+      g.textAlign = 'left';
+    }
+    // Lines of "code" that scroll while the desk works.
+    const shift = Math.floor(performance.now() / 350);
+    for (let i = 0; i < 5; i++) {
+      const width = 160 + seeded(i + shift) * 520;
+      g.fillStyle = i === 4 ? accent : 'rgba(255,255,255,0.16)';
+      g.fillRect(32 + (i % 2) * 40, 262 + i * 26, width, 11);
+    }
+  } else {
+    g.fillStyle = '#ffffff';
+    g.font = `700 58px ${FONT}`;
+    g.fillText(ended ? 'งานเสร็จแล้ว' : 'รอรับงานจาก Claude Code', 32, 160);
+    const t = session?.tokens;
+    if (ended && t) {
+      g.fillStyle = '#9aa3b5';
+      g.font = `500 30px ${FONT}`;
+      g.fillText(`${formatTokens(t.input + t.cacheWrite)} tokens in · ${formatTokens(t.output)} out`, 32, 222);
+    }
+  }
+  screenTexture.needsUpdate = true;
+}
+
 // ---------- PM (team lead) ----------
 
 const lead = createPerson({
@@ -1063,6 +1147,7 @@ function applyState() {
   const progress = session?.endedAt ? 1 : worked.size / (worked.size + 1);
   document.getElementById('progress-bar').style.width = `${progress * 100}%`;
   drawBoard();
+  drawScreen();
 }
 
 // Compare the new snapshot with the previous one and queue work for the lead.
@@ -1128,6 +1213,7 @@ function formatElapsed(ms) {
 }
 
 function updateTimer() {
+  drawScreen();
   const session = currentSession();
   const el = document.getElementById('elapsed');
   if (!session?.startedAt) {
@@ -1288,6 +1374,7 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 drawBoard();
+drawScreen();
 requestAnimationFrame(frame);
 
 const source = new EventSource(eventsUrl());

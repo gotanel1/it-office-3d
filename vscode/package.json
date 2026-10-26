@@ -2,7 +2,7 @@
   "name": "claude-code-3d",
   "displayName": "IT-Office-3D",
   "description": "Watch what Claude Code is doing as a live 3D scene in a VS Code panel. Local only, read only.",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "icon": "media/logo.png",
   "publisher": "gotanel1",
   "license": "MIT",

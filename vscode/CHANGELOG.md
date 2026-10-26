@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.4
+- A big screen on the back wall shows what is happening now: the busy desk, Claude's summary of the call, the file or command, and the elapsed time. When the task ends it shows the token total.
+
 ## 0.3.3
 - Warns in the status bar when the Claude Code plugin `it-office-3d` is not installed, and offers to install it in a terminal or copy the commands.
 - Marketplace page: screenshot and search keywords.

@@ -33,7 +33,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const once = process.argv.includes('--once');
 const noOpen = process.argv.includes('--no-open');
 
-const { url, close } = await startServer({ preferredPort: 3737 });
+const { url, close } = await startServer({ preferredPort: Number(process.env.PORT) || 3737 });
 console.log(`demo running at ${url}`);
 console.log('Open that address in a browser if it did not open by itself. Press Ctrl+C to stop.');
 if (!noOpen) openBrowser(url);
