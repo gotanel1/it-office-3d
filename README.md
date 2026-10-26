@@ -121,7 +121,7 @@ By default the plugin is installed for you in every project (`user` scope). To l
 
 ### Watch inside VS Code instead of a browser
 
-A small VS Code extension shows the same scene in a **IT-Office-3D** panel next to Terminal, with live status in the status bar. You need VS Code 1.85 or newer, and the plugin from method A or B: the plugin reports Claude's work, the extension only shows it.
+A small VS Code extension shows the same scene in an **IT-Office-3D** panel next to Terminal, with live status in the status bar. You need VS Code 1.85 or newer, and the plugin from method A or B: the plugin reports Claude's work, the extension only shows it.
 
 1. In VS Code open the Extensions view (`Ctrl+Shift+X`, or `Cmd+Shift+X` on macOS), search for **IT-Office-3D** by **gotanel1**, and click **Install**. Or open its [Marketplace page](https://marketplace.visualstudio.com/items?itemName=gotanel1.claude-code-3d), or run `code --install-extension gotanel1.claude-code-3d` in a terminal.
 2. VS Code updates it by itself when a new version comes out.

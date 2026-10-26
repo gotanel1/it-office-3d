@@ -2,7 +2,9 @@
 
 Shows the IT-Office-3D scene inside VS Code, so you do not need a browser.
 
-- **Panel:** a **IT-Office-3D** tab sits next to Terminal and Problems. Drag it to the sidebar if you prefer it there.
+![The IT department office](https://raw.githubusercontent.com/gotanel1/it-office-3d/main/docs/images/it-office.jpeg)
+
+- **Panel:** an **IT-Office-3D** tab sits next to Terminal and Problems. Drag it to the sidebar if you prefer it there.
 - **Status bar:** shows who is working on what (`Dev · Edit`), or the token total when the turn ends. Hover for the busy desks, the time and the tokens; click to open the panel.
 - **Toolbar on the panel:** reset the view.
 - **Command Palette:** `IT-Office-3D: Open`, `Reset`.
@@ -14,7 +16,7 @@ claude plugin marketplace add gotanel1/it-office-3d
 claude plugin install it-office-3d@it-office-3d
 ```
 
-Then start a new Claude Code conversation (in the terminal or the Claude Code extension).
+If the plugin is missing, the status bar shows a warning sign and VS Code offers to install it for you. Then start a new Claude Code conversation (in the terminal or the Claude Code extension).
 
 Local VS Code only: remote windows (SSH, WSL, containers) are not supported yet.
 

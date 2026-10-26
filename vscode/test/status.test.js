@@ -9,7 +9,7 @@ Module._load = function (request, ...rest) {
   if (request === 'vscode') return { MarkdownString: class { constructor(value) { this.value = value; } } };
   return load.call(this, request, ...rest);
 };
-const { describe } = require('../extension.js');
+const { describe, pluginInstalled } = require('../extension.js');
 
 const idle = { state: 'waiting', tool: null, detail: null, done: false };
 const snapshot = (session) => ({ active: 's', sessions: { s: session } });
@@ -53,4 +53,25 @@ test("Claude's summary of a call replaces the tool name", () => {
   assert.match(describe(s).tooltip.value, /QA: Run the core test suite \(Bash · npm test\)/);
   const long = snapshot({ roles: roles({ QA: { ...working, note: 'x'.repeat(60) } }), startedAt: Date.now(), endedAt: null });
   assert.equal(describe(long).text.length, '$(loading~spin) QA · '.length + 40);
+});
+
+test('a missing plugin is flagged until Claude starts working', () => {
+  assert.equal(describe(null, false).text, '$(warning) IT-Office-3D');
+  assert.match(describe(null, false).tooltip, /claude plugin install it-office-3d@it-office-3d/);
+  // Unknown (no Claude Code plugin list) never warns.
+  assert.equal(describe(null, null).text, '$(eye) IT-Office-3D');
+  const s = snapshot({ roles: roles(), startedAt: 1000, endedAt: 2000, tokens: null });
+  assert.equal(describe(s, false).text, '$(check) IT-Office-3D · tokens —');
+});
+
+test('the plugin is found in Claude Code\'s plugin list', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ito3d-')), 'installed_plugins.json');
+  fs.writeFileSync(file, JSON.stringify({ version: 2, plugins: { 'it-office-3d@it-office-3d': [{}] } }));
+  assert.equal(pluginInstalled(file), true);
+  fs.writeFileSync(file, JSON.stringify({ version: 2, plugins: { 'other@x': [{}] } }));
+  assert.equal(pluginInstalled(file), false);
+  assert.equal(pluginInstalled(file + '.missing'), null);
 });

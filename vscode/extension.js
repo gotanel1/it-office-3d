@@ -10,6 +10,8 @@ const { spawn } = require('node:child_process');
 const infoFile = path.join(os.homedir(), '.claude-code-3d', 'server.json');
 const VIEW_ID = 'claudeCode3d.scene';
 const POLL_MS = 2000;
+const PLUGIN = 'it-office-3d';
+const INSTALL = [`claude plugin marketplace add gotanel1/${PLUGIN}`, `claude plugin install ${PLUGIN}@${PLUGIN}`];
 
 // The packaged extension carries a copy of the engine in ./core; running from the repo uses packages/core.
 function daemonFile() {
@@ -20,6 +22,16 @@ function daemonFile() {
 function readInfo() {
   try {
     return JSON.parse(fs.readFileSync(infoFile, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+// The scene only moves when Claude Code runs this plugin's hooks. true or false, or null when Claude Code's
+// plugin list cannot be read (not installed, or its format changed), so the extension never nags on a guess.
+function pluginInstalled(file = path.join(os.homedir(), '.claude', 'plugins', 'installed_plugins.json')) {
+  try {
+    return Object.keys(JSON.parse(fs.readFileSync(file, 'utf8')).plugins ?? {}).some((id) => id.startsWith(`${PLUGIN}@`));
   } catch {
     return null;
   }
@@ -100,8 +112,11 @@ function formatTokens(n) {
 }
 
 // One line in the status bar: who is working on what, or the token total once the turn is over.
-function describe(snap) {
+function describe(snap, plugin = null) {
   const session = snap?.active ? snap.sessions[snap.active] : null;
+  if (!session?.startedAt && plugin === false) {
+    return { text: '$(warning) IT-Office-3D', tooltip: `The Claude Code plugin "${PLUGIN}" is not installed, so the scene will not move. Run: ${INSTALL.join(' && ')}` };
+  }
   if (!session?.startedAt) return { text: '$(eye) IT-Office-3D', tooltip: 'Open the IT-Office-3D scene' };
   const t = session.tokens;
   const tokens = t ? `${formatTokens(t.input + t.cacheWrite)} in / ${formatTokens(t.output)} out` : 'tokens —';
@@ -142,7 +157,7 @@ function watchStatus(item) {
     } catch {
       // No server yet: show the idle label.
     }
-    const { text, tooltip } = describe(snap);
+    const { text, tooltip } = describe(snap, pluginInstalled());
     item.text = text;
     item.tooltip = tooltip;
     busy = false;
@@ -150,6 +165,24 @@ function watchStatus(item) {
   tick();
   const timer = setInterval(tick, POLL_MS);
   return { dispose: () => clearInterval(timer) };
+}
+
+// Asked once per window: without the plugin the panel would sit still with no explanation.
+async function offerPluginInstall() {
+  if (pluginInstalled() !== false) return;
+  const choice = await vscode.window.showWarningMessage(
+    `IT-Office-3D needs the Claude Code plugin "${PLUGIN}" to see what Claude is doing.`,
+    'Install in Terminal',
+    'Copy commands',
+  );
+  if (choice === 'Install in Terminal') {
+    const terminal = vscode.window.createTerminal('IT-Office-3D');
+    terminal.show();
+    INSTALL.forEach((cmd) => terminal.sendText(cmd));
+    vscode.window.showInformationMessage('When the install finishes, run "Reload Window" and start a new Claude Code chat.');
+  } else if (choice === 'Copy commands') {
+    await vscode.env.clipboard.writeText(INSTALL.join('\n'));
+  }
 }
 
 async function reset() {
@@ -175,8 +208,9 @@ function activate(context) {
     vscode.commands.registerCommand('claudeCode3d.open', () => vscode.commands.executeCommand(`${VIEW_ID}.focus`)),
     vscode.commands.registerCommand('claudeCode3d.reset', reset),
   );
+  offerPluginInstall();
 }
 
 function deactivate() {}
 
-module.exports = { activate, deactivate, describe };
+module.exports = { activate, deactivate, describe, pluginInstalled };
