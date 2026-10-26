@@ -68,6 +68,18 @@ async function ensureServer(wait = 8000) {
   return null;
 }
 
+// Which Claude Code chat this window shows: a picked session id, or '' for the newest chat in this
+// window's workspace folders. Sending `session` even when empty keeps a choice made in a browser tab
+// (stored by the page) out of VS Code.
+const follow = { session: '' };
+const workspaceRoots = () => (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
+
+function sceneQuery(session, roots) {
+  const params = new URLSearchParams({ session });
+  for (const root of roots) params.append('cwd', root);
+  return params.toString();
+}
+
 function page(body, frameSrc = null) {
   const csp = `default-src 'none'; style-src 'unsafe-inline';${frameSrc ? ` frame-src ${frameSrc};` : ''}`;
   return `<!doctype html>
@@ -100,7 +112,7 @@ class SceneView {
     // shortcut: works for local VS Code only; remote windows forward the port under another host, which the
     // server's Host check refuses. Upgrade by letting the server accept the forwarded host if remote is needed.
     const base = (await vscode.env.asExternalUri(vscode.Uri.parse(info.url))).toString();
-    const url = `${base}?embed`;
+    const url = `${base}?embed&${sceneQuery(follow.session, workspaceRoots())}`;
     view.webview.html = page(`<iframe src="${url}" title="IT-Office-3D"></iframe>`, new URL(base).origin);
   }
 }
@@ -151,7 +163,8 @@ function watchStatus(item) {
     try {
       const info = readInfo();
       if (info?.port) {
-        const res = await fetch(`http://127.0.0.1:${info.port}/state`, { signal: AbortSignal.timeout(1000) });
+        const query = sceneQuery(follow.session, workspaceRoots());
+        const res = await fetch(`http://127.0.0.1:${info.port}/state?${query}`, { signal: AbortSignal.timeout(1000) });
         if (res.ok) snap = await res.json();
       }
     } catch {
@@ -185,6 +198,41 @@ async function offerPluginInstall() {
   }
 }
 
+function ago(ms) {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  return `${Math.round(s / 3600)} h ago`;
+}
+
+// Lists the chats the server has seen, newest first, so the user can pin this window to one of them.
+async function chooseSession(context, scene) {
+  const info = readInfo();
+  let snap = null;
+  try {
+    const res = await fetch(`http://127.0.0.1:${info?.port}/state`, { signal: AbortSignal.timeout(1000) });
+    snap = await res.json();
+  } catch {
+    vscode.window.showWarningMessage('IT-Office-3D: the local server did not answer.');
+    return;
+  }
+  const sessions = Object.entries(snap.sessions).sort(([, a], [, b]) => b.updatedAt - a.updatedAt);
+  const items = [
+    { label: '$(folder) Follow this workspace', description: 'The newest Claude Code chat in this window\'s folders', id: '' },
+    ...sessions.map(([id, s]) => ({
+      label: `${Object.values(s.roles).some((r) => r.state === 'working') ? '$(loading~spin) ' : ''}${path.basename(s.cwd ?? '') || 'session'}`,
+      description: id.slice(0, 8),
+      detail: `${s.cwd ?? ''} · last active ${ago(Date.now() - s.updatedAt)}`,
+      id,
+    })),
+  ].map((item) => ({ ...item, picked: item.id === follow.session, label: item.id === follow.session ? `$(check) ${item.label}` : item.label }));
+  const choice = await vscode.window.showQuickPick(items, { title: 'Which Claude Code chat should this window show?', matchOnDetail: true });
+  if (!choice) return;
+  follow.session = choice.id;
+  await context.workspaceState.update('session', choice.id);
+  scene.load();
+}
+
 async function reset() {
   const info = readInfo();
   if (!info?.port) return;
@@ -196,6 +244,7 @@ async function reset() {
 }
 
 function activate(context) {
+  follow.session = context.workspaceState.get('session', '');
   const scene = new SceneView();
   const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   item.command = 'claudeCode3d.open';
@@ -207,10 +256,13 @@ function activate(context) {
     vscode.window.registerWebviewViewProvider(VIEW_ID, scene, { webviewOptions: { retainContextWhenHidden: true } }),
     vscode.commands.registerCommand('claudeCode3d.open', () => vscode.commands.executeCommand(`${VIEW_ID}.focus`)),
     vscode.commands.registerCommand('claudeCode3d.reset', reset),
+    vscode.commands.registerCommand('claudeCode3d.chooseSession', () => chooseSession(context, scene)),
+    // A changed folder list changes which chats this window follows.
+    vscode.workspace.onDidChangeWorkspaceFolders(() => scene.load()),
   );
   offerPluginInstall();
 }
 
 function deactivate() {}
 
-module.exports = { activate, deactivate, describe, pluginInstalled };
+module.exports = { activate, deactivate, describe, pluginInstalled, sceneQuery };

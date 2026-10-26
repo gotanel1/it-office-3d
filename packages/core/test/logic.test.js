@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { roleForTool, roleForAgentType } from '../src/rules.js';
 import { normalizeHook, describeTool } from '../src/adapter.js';
-import { createState, reduce, expireStale, STALE_WORKING_MS } from '../src/state.js';
+import { createState, reduce, expireStale, STALE_WORKING_MS, activeFor } from '../src/state.js';
 import { TranscriptTail, usageFromRecord, subtractUsage, isAllowedTranscriptPath } from '../src/transcript.js';
 
 test('tools map to the IT department desks', () => {
@@ -277,4 +277,21 @@ test('only transcripts inside the Claude config folder are allowed', () => {
   assert.equal(isAllowedTranscriptPath(path.join(os.tmpdir(), 'elsewhere.jsonl'), env), false);
   assert.equal(isAllowedTranscriptPath(path.join(env.CLAUDE_CONFIG_DIR, '..', 'cfg-evil', 's.jsonl'), env), false);
   assert.equal(isAllowedTranscriptPath(undefined, env), false);
+});
+
+test('a viewer follows its picked session, else the newest one in its folders', () => {
+  const state = {
+    active: 'web',
+    sessions: {
+      a1: { cwd: 'C:\\work\\shop', updatedAt: 1 },
+      a2: { cwd: 'c:/work/shop/api', updatedAt: 3 },
+      web: { cwd: 'C:\\work\\website', updatedAt: 5 },
+    },
+  };
+  assert.equal(activeFor(state, null), 'web');
+  assert.equal(activeFor(state, 'a1', ['C:\\work\\website']), 'a1');
+  // Subfolders count, other projects and look-alike names do not.
+  assert.equal(activeFor(state, null, ['C:\\Work\\Shop\\']), 'a2');
+  assert.equal(activeFor(state, null, ['C:\\work\\sho']), null);
+  assert.equal(activeFor(state, 'gone', ['C:\\elsewhere']), null);
 });

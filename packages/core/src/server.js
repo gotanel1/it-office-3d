@@ -2,7 +2,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createState, reduce, expireStale, pruneSessions } from './state.js';
+import { createState, reduce, expireStale, pruneSessions, activeFor } from './state.js';
 import { normalizeHook } from './adapter.js';
 import { TranscriptTail, isAllowedTranscriptPath, subtractUsage } from './transcript.js';
 
@@ -26,20 +26,20 @@ const TYPES = {
 // With `idleExitMs`, `onIdle` is called once nobody has watched or sent events for that long.
 export function startServer({ port = 0, preferredPort = null, idleExitMs = 0, onIdle = null } = {}) {
   let state = createState();
-  // Each browser tab, with the session it asked for (null = follow the latest one).
+  // Each browser tab, with the session it asked for (null = follow the latest one) and the folders it follows.
   const clients = new Map();
   // Token tracking per session: the transcript reader and the totals at the start of the current prompt.
   const metas = new Map();
   let actualPort = 0;
   let lastActivity = Date.now();
 
-  const snapshotFor = (sessionId) => ({
-    active: sessionId && state.sessions[sessionId] ? sessionId : state.active,
+  const snapshotFor = (sessionId, roots = []) => ({
+    active: activeFor(state, sessionId, roots),
     sessions: state.sessions,
   });
 
   const broadcast = () => {
-    for (const [res, { session }] of clients) res.write(`data: ${JSON.stringify(snapshotFor(session))}\n\n`);
+    for (const [res, { session, roots }] of clients) res.write(`data: ${JSON.stringify(snapshotFor(session, roots))}\n\n`);
   };
 
   const send = (res, code, body, type = 'application/json', extra = {}) => {
@@ -166,9 +166,10 @@ export function startServer({ port = 0, preferredPort = null, idleExitMs = 0, on
         Connection: 'keep-alive',
       });
       const session = url.searchParams.get('session');
-      clients.set(res, { session });
+      const roots = url.searchParams.getAll('cwd');
+      clients.set(res, { session, roots });
       lastActivity = Date.now();
-      res.write(`data: ${JSON.stringify(snapshotFor(session))}\n\n`);
+      res.write(`data: ${JSON.stringify(snapshotFor(session, roots))}\n\n`);
       req.on('close', () => {
         clients.delete(res);
         lastActivity = Date.now();
@@ -187,7 +188,7 @@ export function startServer({ port = 0, preferredPort = null, idleExitMs = 0, on
     }
 
     if (req.method === 'GET' && url.pathname === '/state') {
-      send(res, 200, JSON.stringify(snapshotFor(url.searchParams.get('session'))));
+      send(res, 200, JSON.stringify(snapshotFor(url.searchParams.get('session'), url.searchParams.getAll('cwd'))));
       return;
     }
 

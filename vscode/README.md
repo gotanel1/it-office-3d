@@ -6,8 +6,9 @@ Shows the IT-Office-3D scene inside VS Code, so you do not need a browser.
 
 - **Panel:** an **IT-Office-3D** tab sits next to Terminal and Problems. Drag it to the sidebar if you prefer it there.
 - **Status bar:** shows who is working on what (`Dev · Edit`), or the token total when the turn ends. Hover for the busy desks, the time and the tokens; click to open the panel.
-- **Toolbar on the panel:** reset the view.
-- **Command Palette:** `IT-Office-3D: Open`, `Reset`.
+- **Sessions:** each window follows the newest Claude Code chat in its own workspace folders. Use **Choose Session** on the panel toolbar to pin one chat instead.
+- **Toolbar on the panel:** choose the session, reset the view.
+- **Command Palette:** `IT-Office-3D: Open`, `Choose Session`, `Reset`.
 
 The scene moves only when the **IT-Office-3D plugin** is installed in Claude Code, because the plugin's hooks are what report Claude's work. Install it once from a terminal:
 

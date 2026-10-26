@@ -28,8 +28,13 @@ export function selectedSession() {
 
 // Scene modules open their live connection through this so they follow the chosen session.
 export function eventsUrl() {
+  const params = new URLSearchParams();
   const session = selectedSession();
-  return session ? `/events?session=${encodeURIComponent(session)}` : '/events';
+  if (session) params.set('session', session);
+  // A VS Code window passes its workspace folders, so it follows the chats of its own project.
+  for (const cwd of new URLSearchParams(location.search).getAll('cwd')) params.append('cwd', cwd);
+  const query = params.toString();
+  return query ? `/events?${query}` : '/events';
 }
 
 // The scene builds its listeners once, so switching session reloads the page.

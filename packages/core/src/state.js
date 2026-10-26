@@ -45,6 +45,22 @@ export function pruneSessions(state, keep = 12) {
   if (state.active && !state.sessions[state.active]) state.active = ids[0] ?? null;
 }
 
+// The session a viewer sees: the one it picked, else the newest session working inside its folders (a VS
+// Code window passes its workspace), else the newest session overall.
+export function activeFor(state, sessionId, roots = []) {
+  if (sessionId && state.sessions[sessionId]) return sessionId;
+  if (roots.length === 0) return state.active;
+  // Case is ignored because Windows reports the same folder with different drive-letter case.
+  const norm = (p) => String(p).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+  const wanted = roots.map(norm);
+  const inside = (cwd) => cwd && wanted.some((root) => norm(cwd) === root || norm(cwd).startsWith(`${root}/`));
+  let best = null;
+  for (const [id, session] of Object.entries(state.sessions)) {
+    if (inside(session.cwd) && (!best || session.updatedAt > state.sessions[best].updatedAt)) best = id;
+  }
+  return best;
+}
+
 // Placeholder work: the BA reads each new prompt, and the architect "thinks" while a turn is running and
 // no tool is busy (the model is reasoning or writing). Nothing reports those phases, so without this the
 // scene would look idle during the longest part of a turn.

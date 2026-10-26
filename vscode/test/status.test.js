@@ -9,7 +9,7 @@ Module._load = function (request, ...rest) {
   if (request === 'vscode') return { MarkdownString: class { constructor(value) { this.value = value; } } };
   return load.call(this, request, ...rest);
 };
-const { describe, pluginInstalled } = require('../extension.js');
+const { describe, pluginInstalled, sceneQuery } = require('../extension.js');
 
 const idle = { state: 'waiting', tool: null, detail: null, done: false };
 const snapshot = (session) => ({ active: 's', sessions: { s: session } });
@@ -74,4 +74,11 @@ test('the plugin is found in Claude Code\'s plugin list', () => {
   fs.writeFileSync(file, JSON.stringify({ version: 2, plugins: { 'other@x': [{}] } }));
   assert.equal(pluginInstalled(file), false);
   assert.equal(pluginInstalled(file + '.missing'), null);
+});
+
+test('the scene URL carries the chosen session and the workspace folders', () => {
+  const q = new URLSearchParams(sceneQuery('', ['C:\\work\\shop', '/home/me/api']));
+  assert.equal(q.get('session'), '');
+  assert.deepEqual(q.getAll('cwd'), ['C:\\work\\shop', '/home/me/api']);
+  assert.equal(new URLSearchParams(sceneQuery('abc', [])).get('session'), 'abc');
 });

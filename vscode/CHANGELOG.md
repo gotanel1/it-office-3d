@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.5
+- Each VS Code window follows only the Claude Code chats running in its own workspace folders, so chats in other projects no longer move this window's scene.
+- New **Choose Session** button on the panel (and command) to pin the window to one chat, or go back to following the workspace.
+
 ## 0.3.4
 - A big screen on the back wall shows what is happening now: the busy desk, Claude's summary of the call, the file or command, and the elapsed time. When the task ends it shows the token total.
 
