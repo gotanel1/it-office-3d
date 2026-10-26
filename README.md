@@ -123,10 +123,10 @@ By default the plugin is installed for you in every project (`user` scope). To l
 
 A small VS Code extension shows the same scene in a **Claude 3D** panel next to Terminal, with live status in the status bar. You need VS Code 1.85 or newer, and the plugin from method A or B: the plugin reports Claude's work, the extension only shows it.
 
-1. Download [claude-code-3d-0.3.1.vsix](https://github.com/gotanel1/it-office-3d/releases/latest/download/claude-code-3d-0.3.1.vsix) from the [Releases page](https://github.com/gotanel1/it-office-3d/releases/latest).
-2. Install it, in either way:
-   - In VS Code press `Ctrl+Shift+P` (`Cmd+Shift+P` on macOS), run **Extensions: Install from VSIX...**, and pick the downloaded file.
-   - Or in a terminal, from the folder you downloaded it to: `code --install-extension claude-code-3d-0.3.1.vsix`
+1. In VS Code open the Extensions view (`Ctrl+Shift+X`, or `Cmd+Shift+X` on macOS), search for **Claude Code 3D** by **gotanel1**, and click **Install**. Or open its [Marketplace page](https://marketplace.visualstudio.com/items?itemName=gotanel1.claude-code-3d), or run `code --install-extension gotanel1.claude-code-3d` in a terminal.
+2. VS Code updates it by itself when a new version comes out.
+
+   Using Cursor, Antigravity or another editor without the VS Code Marketplace? Download the `.vsix` from the [Releases page](https://github.com/gotanel1/it-office-3d/releases/latest) instead, press `Ctrl+Shift+P`, run **Extensions: Install from VSIX...** and pick the file. Installed this way it does not update itself.
 3. Press `Ctrl+Shift+P`, run **Reload Window**.
 4. Click **Claude 3D** in the status bar (bottom right), or open the **Claude 3D** tab next to Terminal.
 5. Start a **new** Claude Code chat and give it a task. The characters move and the status bar shows who is working, for example `QA · Run the core test suite`.

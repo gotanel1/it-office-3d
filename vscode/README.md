@@ -20,7 +20,9 @@ Local VS Code only: remote windows (SSH, WSL, containers) are not supported yet.
 
 ## Install
 
-Download `claude-code-3d-0.3.1.vsix` from the [latest release](https://github.com/gotanel1/it-office-3d/releases/latest), then in VS Code run **Extensions: Install from VSIX...** from the Command Palette and pick the file. Or run `code --install-extension claude-code-3d-0.3.1.vsix`. Reload the window afterwards.
+Search for **Claude Code 3D** in the Extensions view, or run `code --install-extension gotanel1.claude-code-3d`. VS Code keeps it up to date.
+
+For editors without the VS Code Marketplace (Cursor, Antigravity), download the `.vsix` from the [latest release](https://github.com/gotanel1/it-office-3d/releases/latest) and run **Extensions: Install from VSIX...**.
 
 ## Build the .vsix yourself
 
@@ -30,3 +32,9 @@ npm test
 npm run package
 code --install-extension claude-code-3d-0.3.1.vsix
 ```
+
+## Release a new version
+
+1. Raise `version` in `vscode/package.json` (the Marketplace refuses a version it already has), then build: `cd vscode && npm test && npm run package`.
+2. Open https://marketplace.visualstudio.com/manage/publishers/gotanel1, click **...** next to the extension, choose **Update**, and upload the new `.vsix`. VS Code users get the update by themselves.
+3. Attach the same `.vsix` to a new GitHub release for editors without the Marketplace: `gh release create v<version> claude-code-3d-<version>.vsix`.
