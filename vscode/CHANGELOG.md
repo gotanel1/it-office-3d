@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+- **Waiting for you:** when Claude asks for permission, the wall screen turns amber, the PM raises a hand and the status bar shows **Needs you**.
+- **Failures:** a tool call that fails marks its desk red (tag, desk light, task board, status bar). The error text itself is never kept.
+- **Desk activity:** click a desk tag to see what it did in the current task, newest first. In VS Code, **Open** shows the file in the editor (only files inside the window's folders).
+- **Notifications** when Claude finishes or waits for approval, by default only while VS Code is not the active window (setting **IT-Office-3D: Notify**).
+- Plugin 0.4.0: also listens to Claude Code's PermissionRequest and Notification hooks.
+
 ## 0.4.0
 - English and Thai: the speech bubbles and the wall screen follow the new **IT-Office-3D: Language** setting (by default, the VS Code language).
 - A server left running by an older version is replaced by itself, so new features work without stopping anything by hand.

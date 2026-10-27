@@ -7,7 +7,9 @@ Shows the IT-Office-3D scene inside VS Code, so you do not need a browser.
 - **Panel:** an **IT-Office-3D** tab sits next to Terminal and Problems. Drag it to the sidebar if you prefer it there.
 - **Status bar:** shows who is working on what (`Dev · Edit`), or the token total when the turn ends. Hover for the busy desks, the time and the tokens; click to open the panel.
 - **Sessions:** each window follows the newest Claude Code chat in its own workspace folders. Use **Choose Session** on the panel toolbar to pin one chat instead.
-- **Wall screen:** the busy desk, Claude's summary of the call, the file or command, and the time.
+- **Wall screen:** the busy desk, Claude's summary of the call, the file or command, and the time. It turns amber when Claude waits for your approval.
+- **Desk activity:** click a desk tag to list what it did in this task; **Open** shows a file in the editor. Failed calls are marked red.
+- **Notifications:** when Claude finishes or needs your approval, while VS Code is in the background (setting **IT-Office-3D: Notify**).
 - **Language:** English or Thai, by default the same as VS Code (setting **IT-Office-3D: Language**).
 - **Toolbar on the panel:** choose the session, reset the view.
 - **Command Palette:** `IT-Office-3D: Open`, `Choose Session`, `Reset`, `Show Diagnostics`, `Install Claude Code Plugin`.

@@ -2,7 +2,7 @@
   "name": "claude-code-3d",
   "displayName": "IT-Office-3D",
   "description": "Watch what Claude Code is doing as a live 3D scene in a VS Code panel. Local only, read only.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "icon": "media/logo.png",
   "publisher": "gotanel1",
   "license": "MIT",
@@ -109,6 +109,21 @@
           ],
           "default": "auto",
           "description": "Language of the speech bubbles and the wall screen."
+        },
+        "itOffice3d.notify": {
+          "type": "string",
+          "enum": [
+            "whenUnfocused",
+            "always",
+            "off"
+          ],
+          "enumDescriptions": [
+            "Only when VS Code is not the active window",
+            "Always",
+            "Never"
+          ],
+          "default": "whenUnfocused",
+          "description": "Show a notification when Claude finishes a task or waits for your approval."
         }
       }
     },

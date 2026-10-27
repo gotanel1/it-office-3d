@@ -8,6 +8,8 @@ const EVENT_NAMES = {
   PreToolUse: 'PreToolUse',
   PostToolUse: 'PostToolUse',
   PostToolUseFailure: 'PostToolUse',
+  PermissionRequest: 'PermissionRequest',
+  Notification: 'Notification',
   SubagentStop: 'SubagentStop',
   Stop: 'Stop',
 };
@@ -47,15 +49,21 @@ export function normalizeHook(raw) {
   if (typeof raw.transcript_path === 'string') ev.transcript_path = raw.transcript_path;
   if (typeof raw.cwd === 'string') ev.cwd = raw.cwd;
 
-  if (event === 'PreToolUse' || event === 'PostToolUse') {
+  if (event === 'PreToolUse' || event === 'PostToolUse' || event === 'PermissionRequest') {
     ev.tool = typeof raw.tool_name === 'string' ? raw.tool_name : undefined;
     const input = raw.tool_input && typeof raw.tool_input === 'object' ? raw.tool_input : {};
     Object.assign(ev, describeTool(ev.tool, input));
+    // The full path, so a desk's file list can open it in the editor.
+    const file = input.file_path ?? input.notebook_path;
+    if (typeof file === 'string' && file) ev.file = file.slice(0, 600);
     // Claude's own one-line summary of the call (Bash and Agent have one), shown as what the desk is doing.
     if (typeof input.description === 'string' && input.description.trim()) ev.note = clip(input.description, 100);
     if (typeof input.subagent_type === 'string') ev.subagent_type = input.subagent_type;
     else if (input.description) ev.subagent_type = String(input.description);
   }
+  // A failed call (not one the user interrupted) marks its desk; the error text itself is never kept.
+  if (raw.hook_event_name === 'PostToolUseFailure' && raw.is_interrupt !== true) ev.failed = true;
+  if (event === 'Notification' && typeof raw.notification_type === 'string') ev.notification_type = raw.notification_type.slice(0, 60);
   if (event === 'SubagentStop' && typeof raw.agent_type === 'string') ev.agent_type = raw.agent_type;
   return ev;
 }

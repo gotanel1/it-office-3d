@@ -8,6 +8,7 @@ const STEP_MS = 4200;
 
 // One tool call per desk, in a plausible order. A tool's PostToolUse repeats its file or command,
 // because that is what picks the desk. `note` is the one-line summary Claude attaches to Bash and Agent calls.
+// `ask` plays a permission question before the call runs; `fail` makes the call fail.
 const calls = [
   { tool: 'AskUserQuestion' },
   { tool: 'Agent', subagent_type: 'Explore', note: 'Find where the server starts' },
@@ -16,13 +17,17 @@ const calls = [
   { tool: 'Edit', path: 'src/state.js' },
   { tool: 'Write', path: 'migrations/001_users.sql' },
   { tool: 'Bash', command: 'npm test', note: 'Run the core test suite' },
-  { tool: 'Bash', command: 'git commit -m "Add users"', note: 'Commit the users feature' },
-  { tool: 'Bash', command: 'npm audit', note: 'Check dependencies for known vulnerabilities' },
+  { tool: 'Bash', command: 'git commit -m "Add users"', note: 'Commit the users feature', ask: true },
+  { tool: 'Bash', command: 'npm audit', note: 'Check dependencies for known vulnerabilities', fail: true },
   { tool: 'Edit', path: 'docs/README.md' },
 ];
 const script = [
   { event: 'UserPromptSubmit' },
-  ...calls.flatMap((call) => [{ event: 'PreToolUse', ...call }, { event: 'PostToolUse', ...call }]),
+  ...calls.flatMap(({ ask, fail, ...call }) => [
+    { event: 'PreToolUse', ...call },
+    ...(ask ? [{ event: 'PermissionRequest', ...call }] : []),
+    { event: 'PostToolUse', ...call, ...(fail ? { failed: true } : {}) },
+  ]),
   { event: 'SubagentStop', role: 'Dev' },
   { event: 'Stop' },
 ];

@@ -79,6 +79,7 @@ test('hook payloads are normalised', () => {
     cwd: '/work/app',
     tool: 'Edit',
     path: 'src/index.js',
+    file: 'C:\\work\\app\\src\\index.js',
   });
   // File contents and prompts must never be copied into events.
   assert.ok(!JSON.stringify(pre).includes('SECRET'));
@@ -95,9 +96,18 @@ test('hook payloads are normalised', () => {
   assert.equal(agent.path, undefined);
   assert.ok(!JSON.stringify(agent).includes('SECRET'));
 
-  assert.equal(normalizeHook({ hook_event_name: 'PostToolUseFailure', session_id: 's1', tool_name: 'Bash', tool_input: {} }).event, 'PostToolUse');
+  const failure = normalizeHook({ hook_event_name: 'PostToolUseFailure', session_id: 's1', tool_name: 'Bash', tool_input: {}, error: 'SECRET output' });
+  assert.equal(failure.event, 'PostToolUse');
+  assert.equal(failure.failed, true);
+  assert.ok(!JSON.stringify(failure).includes('SECRET'));
+  // A call the user stopped is not a failure.
+  assert.equal(normalizeHook({ hook_event_name: 'PostToolUseFailure', session_id: 's1', tool_name: 'Bash', is_interrupt: true }).failed, undefined);
   assert.equal(normalizeHook({ hook_event_name: 'UserPromptSubmit', session_id: 's1', prompt: 'private text' }).prompt, undefined);
-  assert.equal(normalizeHook({ hook_event_name: 'Notification', session_id: 's1' }), null);
+  const note = normalizeHook({ hook_event_name: 'Notification', session_id: 's1', notification_type: 'permission_prompt', message: 'SECRET' });
+  assert.equal(note.notification_type, 'permission_prompt');
+  assert.ok(!JSON.stringify(note).includes('SECRET'));
+  assert.equal(normalizeHook({ hook_event_name: 'PermissionRequest', session_id: 's1', tool_name: 'Bash', tool_input: { command: 'rm -rf x' } }).command, 'rm -rf x');
+  assert.equal(normalizeHook({ hook_event_name: 'PreCompact', session_id: 's1' }), null);
   assert.equal(normalizeHook(null), null);
   assert.equal(normalizeHook('x'), null);
   assert.equal(describeTool('Grep', { pattern: 'foo.*bar' }).path, 'foo.*bar');
@@ -294,4 +304,27 @@ test('a viewer follows its picked session, else the newest one in its folders', 
   assert.equal(activeFor(state, null, ['C:\\Work\\Shop\\']), 'a2');
   assert.equal(activeFor(state, null, ['C:\\work\\sho']), null);
   assert.equal(activeFor(state, 'gone', ['C:\\elsewhere']), null);
+});
+
+test('a permission question waits until the call goes on, and a failed call marks its desk', () => {
+  const state = createState();
+  const s = (ev) => reduce(state, { session_id: 's', ...ev });
+  s({ event: 'UserPromptSubmit' });
+  s({ event: 'PreToolUse', tool: 'Bash', command: 'npm test', note: 'Run tests' });
+  s({ event: 'PermissionRequest', tool: 'Bash', command: 'npm test' });
+  assert.equal(state.sessions.s.waiting.detail, 'npm test');
+  s({ event: 'PostToolUse', tool: 'Bash', command: 'npm test', failed: true });
+  assert.equal(state.sessions.s.waiting, null);
+  assert.equal(state.sessions.s.roles.QA.failed, true);
+  assert.equal(state.logs.s.QA[0].failed, true);
+  assert.equal(state.logs.s.QA[0].note, 'Run tests');
+  // Starting again clears the mark; a new prompt clears the log.
+  s({ event: 'PreToolUse', tool: 'Bash', command: 'npm test' });
+  assert.equal(state.sessions.s.roles.QA.failed, false);
+  s({ event: 'Notification', notification_type: 'permission_prompt' });
+  assert.ok(state.sessions.s.waiting);
+  s({ event: 'Stop' });
+  assert.equal(state.sessions.s.waiting, null);
+  s({ event: 'UserPromptSubmit' });
+  assert.equal(state.logs.s, undefined);
 });

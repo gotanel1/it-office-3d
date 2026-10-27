@@ -36,6 +36,8 @@ function redact(input) {
     cwd: clip(input.cwd, 600),
     tool_name: clip(input.tool_name, 120),
     agent_type: clip(input.agent_type, 120),
+    notification_type: clip(input.notification_type, 60),
+    is_interrupt: input.is_interrupt === true ? true : undefined,
   };
   if (input.tool_input && typeof input.tool_input === 'object') {
     out.tool_input = {};

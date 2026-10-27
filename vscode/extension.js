@@ -107,10 +107,14 @@ function sceneQuery(session, roots) {
 function page(body, frameSrc = null) {
   const nonce = crypto.randomBytes(16).toString('base64');
   const csp = `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';${frameSrc ? ` frame-src ${frameSrc};` : ''}`;
-  // Passes "panel shown / hidden" on to the scene, which stops drawing while hidden.
-  const relay = `window.addEventListener('message', (e) => {
+  // Passes "panel shown / hidden" on to the scene, which stops drawing while hidden, and the scene's
+  // "open this file" requests back to the extension, which checks the path before opening it.
+  const relay = `const vscode = acquireVsCodeApi();
+window.addEventListener('message', (e) => {
   const frame = document.querySelector('iframe');
-  if (frame && e.data && e.data.type === 'it-office-3d:visible') frame.contentWindow.postMessage(e.data, '*');
+  if (!frame || !e.data) return;
+  if (e.data.type === 'it-office-3d:visible') frame.contentWindow.postMessage(e.data, '*');
+  else if (e.data.type === 'it-office-3d:open' && e.source === frame.contentWindow) vscode.postMessage({ type: 'open', file: String(e.data.file) });
 });`;
   return `<!doctype html>
 <html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}">
@@ -127,6 +131,9 @@ class SceneView {
       this.view = undefined;
     });
     view.onDidChangeVisibility(() => view.webview.postMessage({ type: 'it-office-3d:visible', visible: view.visible }));
+    view.webview.onDidReceiveMessage((msg) => {
+      if (msg?.type === 'open') openFile(msg.file);
+    });
     return this.load();
   }
 
@@ -145,6 +152,27 @@ class SceneView {
     const base = (await vscode.env.asExternalUri(vscode.Uri.parse(info.url))).toString();
     const url = `${base}?embed&lang=${sceneLanguage()}&${sceneQuery(follow.session, workspaceRoots())}`;
     view.webview.html = page(`<iframe src="${url}" title="IT-Office-3D"></iframe>`, new URL(base).origin);
+  }
+}
+
+// Opens a file the scene asked for, only when it is an existing file inside this window's workspace:
+// the request comes from a page, so it must not reach anything else on the disk.
+function insideRoots(file, roots) {
+  const norm = (p) => path.resolve(p).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+  const target = norm(file);
+  return roots.some((root) => target === norm(root) || target.startsWith(`${norm(root)}/`));
+}
+
+async function openFile(file) {
+  if (typeof file !== 'string' || !path.isAbsolute(file) || !insideRoots(file, workspaceRoots())) {
+    vscode.window.showWarningMessage("IT-Office-3D only opens files inside this window's folders.");
+    return;
+  }
+  try {
+    if (!fs.statSync(file).isFile()) return;
+    await vscode.window.showTextDocument(vscode.Uri.file(file), { preview: true });
+  } catch {
+    vscode.window.showWarningMessage(`IT-Office-3D: ${path.basename(file)} no longer exists.`);
   }
 }
 
@@ -167,26 +195,59 @@ function describe(snap, plugin = null) {
   const working = Object.entries(session.roles).filter(([, r]) => r.state === 'working');
   // Ten desks: list only the ones that are busy or finished.
   const lines = Object.entries(session.roles)
-    .filter(([, r]) => r.state !== 'waiting' || r.done)
+    .filter(([, r]) => r.state !== 'waiting' || r.done || r.failed)
     .map(([role, r]) => {
-      if (r.state !== 'working') return `${role}: done`;
+      if (r.state !== 'working') return `${role}: ${r.failed ? 'failed' : 'done'}`;
       const call = `${r.tool}${r.detail ? ` · ${r.detail}` : ''}`;
       return r.note ? `${role}: ${r.note} (${call})` : `${role}: ${call}`;
     });
   if (lines.length === 0) lines.push('No desk busy');
+  const w = session.waiting;
+  if (w) lines.unshift(`Claude is waiting for your approval${w.tool ? `: ${w.tool}${w.detail ? ` · ${w.detail}` : ''}` : ''}`, '');
   const tooltip = new vscode.MarkdownString(
     [...lines, '', `${seconds}s · ${tokens}`, '', 'Click to open the IT-Office-3D scene'].map((l) => l.replace(/[\\`*_[\]<>]/g, '\\$&')).join('  \n'),
   );
-  if (session.endedAt || working.length === 0) return { text: `$(check) IT-Office-3D · ${tokens}`, tooltip };
+  if (w) return { text: `$(bell) Needs you${w.tool ? ` · ${w.tool}` : ''}`, tooltip, warn: true };
+  const failed = Object.values(session.roles).filter((r) => r.failed).length;
+  if (session.endedAt || working.length === 0) {
+    return { text: `${failed ? '$(error)' : '$(check)'} IT-Office-3D · ${failed ? `${failed} failed · ` : ''}${tokens}`, tooltip };
+  }
   const [role, r] = working[0];
   // Claude's own summary of the call, when it gave one, says more than the tool name.
   const what = r.note && r.note.length > 40 ? `${r.note.slice(0, 39)}…` : r.note ?? r.tool;
   return { text: `$(loading~spin) ${role} · ${what}`, tooltip };
 }
 
+// What to tell the user when the followed chat changes: it finished, or it waits for an approval.
+// Both snapshots are of the same followed view; the first poll (no previous) never notifies.
+function notification(prev, next) {
+  const a = prev?.active ? prev.sessions[prev.active] : null;
+  const b = next?.active ? next.sessions[next.active] : null;
+  if (!a || !b || prev.active !== next.active || a.startedAt !== b.startedAt) return null;
+  if (b.waiting && !a.waiting) {
+    const what = b.waiting.tool ? `: ${b.waiting.tool}${b.waiting.detail ? ` · ${b.waiting.detail}` : ''}` : '.';
+    return { kind: 'waiting', message: `Claude is waiting for your approval${what}` };
+  }
+  if (b.endedAt && !a.endedAt) {
+    const seconds = Math.round((b.endedAt - b.startedAt) / 1000);
+    const time = seconds >= 60 ? `${Math.floor(seconds / 60)} min ${seconds % 60} s` : `${seconds} s`;
+    const failed = Object.values(b.roles).filter((r) => r.failed).length;
+    return { kind: 'finished', message: `Claude finished in ${time}${failed ? `, ${failed} desk${failed > 1 ? 's' : ''} failed` : ''}.` };
+  }
+  return null;
+}
+
+async function notify(note) {
+  const mode = vscode.workspace.getConfiguration('itOffice3d').get('notify', 'whenUnfocused');
+  if (mode === 'off' || (mode === 'whenUnfocused' && vscode.window.state.focused)) return;
+  const show = note.kind === 'waiting' ? vscode.window.showWarningMessage : vscode.window.showInformationMessage;
+  if ((await show(`IT-Office-3D: ${note.message}`, 'Open')) === 'Open') vscode.commands.executeCommand('claudeCode3d.open');
+}
+
 // Polls the server instead of keeping a live stream, so an idle server can still shut itself down.
 function watchStatus(item) {
   let busy = false;
+  let previous = null;
   const tick = async () => {
     if (busy) return;
     busy = true;
@@ -201,9 +262,13 @@ function watchStatus(item) {
     } catch {
       // No server yet: show the idle label.
     }
-    const { text, tooltip } = describe(snap, pluginInstalled());
+    const { text, tooltip, warn } = describe(snap, pluginInstalled());
     item.text = text;
     item.tooltip = tooltip;
+    item.backgroundColor = warn ? new vscode.ThemeColor('statusBarItem.warningBackground') : undefined;
+    const note = notification(previous, snap);
+    if (note) notify(note);
+    previous = snap;
     busy = false;
   };
   tick();
@@ -378,4 +443,4 @@ function activate(context) {
 
 function deactivate() {}
 
-module.exports = { activate, deactivate, describe, pluginInstalled, pluginVersion, sceneQuery, sceneLanguage, formatDiagnostics };
+module.exports = { activate, deactivate, describe, notification, pluginInstalled, pluginVersion, sceneQuery, sceneLanguage, formatDiagnostics, insideRoots };

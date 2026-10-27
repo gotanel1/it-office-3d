@@ -9,7 +9,7 @@ Module._load = function (request, ...rest) {
   if (request === 'vscode') return { MarkdownString: class { constructor(value) { this.value = value; } } };
   return load.call(this, request, ...rest);
 };
-const { describe, pluginInstalled, pluginVersion, sceneQuery, sceneLanguage, formatDiagnostics } = require('../extension.js');
+const { describe, notification, pluginInstalled, pluginVersion, sceneQuery, sceneLanguage, formatDiagnostics, insideRoots } = require('../extension.js');
 
 const idle = { state: 'waiting', tool: null, detail: null, done: false };
 const snapshot = (session) => ({ active: 's', sessions: { s: session } });
@@ -118,4 +118,36 @@ test("the plugin version is read from Claude Code's plugin list", () => {
   fs.writeFileSync(file, JSON.stringify({ version: 2, plugins: { 'it-office-3d@it-office-3d': [{ version: '0.3.0' }] } }));
   assert.equal(pluginVersion(file), '0.3.0');
   assert.equal(pluginVersion(file + '.missing'), null);
+});
+
+test('waiting for approval and failed desks show in the status bar', () => {
+  const waiting = snapshot({ roles: roles(), startedAt: Date.now(), endedAt: null, waiting: { tool: 'Bash', detail: 'rm -rf build' } });
+  const shown = describe(waiting);
+  assert.equal(shown.text, '$(bell) Needs you · Bash');
+  assert.equal(shown.warn, true);
+  assert.match(shown.tooltip.value, /waiting for your approval: Bash · rm -rf build/);
+  const failed = snapshot({ roles: roles({ QA: { ...idle, failed: true } }), startedAt: 1000, endedAt: 5000, tokens: null });
+  assert.equal(describe(failed).text, '$(error) IT-Office-3D · 1 failed · tokens —');
+  assert.match(describe(failed).tooltip.value, /QA: failed/);
+});
+
+test('notifications fire once when the followed chat finishes or waits', () => {
+  const at = (session) => snapshot({ roles: roles(), startedAt: 1000, endedAt: null, waiting: null, ...session });
+  assert.equal(notification(null, at({})), null);
+  assert.equal(notification(at({}), at({})), null);
+  assert.equal(notification(at({}), at({ waiting: { tool: 'Bash', detail: 'npm i' } })).message, 'Claude is waiting for your approval: Bash · npm i');
+  assert.equal(notification(at({}), at({ endedAt: 76_000 })).message, 'Claude finished in 1 min 15 s.');
+  assert.equal(notification(at({}), at({ endedAt: 6000, roles: roles({ QA: { ...idle, failed: true } }) })).message, 'Claude finished in 5 s, 1 desk failed.');
+  // A different task or chat is not "finished".
+  assert.equal(notification(at({}), at({ startedAt: 2000, endedAt: 9000 })), null);
+});
+
+test('only files inside the workspace may be opened from the scene', () => {
+  const path = require('node:path');
+  const os = require('node:os');
+  const root = path.join(os.tmpdir(), 'shop');
+  assert.equal(insideRoots(path.join(root, 'src', 'a.js'), [root]), true);
+  assert.equal(insideRoots(path.join(root + '-other', 'a.js'), [root]), false);
+  assert.equal(insideRoots(path.join(root, '..', 'secret.txt'), [root]), false);
+  assert.equal(insideRoots(path.join(root, 'a.js'), []), false);
 });

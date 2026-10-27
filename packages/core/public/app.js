@@ -22,6 +22,7 @@ const ROLES = [
 const WRITER = 'Writer';
 
 const DONE_GREEN = 0x3fbf74;
+const FAILED_RED = 0xd9473b;
 // Desk and seat positions inside a station; the front row is the same station moved FRONT_ROW forward.
 const DESK_Z = -2.9;
 const PERSON_Z = -3.7;
@@ -158,6 +159,15 @@ const TEXT = {
     wrapUp: (name) => `${name}, send the summary to the client!`,
     finished: 'All done',
     waiting: 'Waiting for Claude Code',
+    needsYou: 'Claude needs your approval',
+    answerIn: 'Allow or deny it in Claude Code',
+    pmWaiting: 'PM · Waiting for your OK',
+    showActivity: 'click to see what this desk did',
+    activityTitle: 'In this task',
+    noActivity: 'Nothing yet in this task.',
+    open: 'Open',
+    close: 'Close',
+    failed: 'Failed',
   },
   th: {
     phrases: {
@@ -191,6 +201,15 @@ const TEXT = {
     wrapUp: (name) => `${name} สรุปคำตอบส่งให้ลูกค้าได้เลย!`,
     finished: 'งานเสร็จแล้ว',
     waiting: 'รอรับงานจาก Claude Code',
+    needsYou: 'Claude รอคุณอนุมัติ',
+    answerIn: 'กดอนุญาตหรือปฏิเสธใน Claude Code',
+    pmWaiting: 'PM · รอคุณอนุมัติ',
+    showActivity: 'คลิกเพื่อดูว่าโต๊ะนี้ทำอะไรไปบ้าง',
+    activityTitle: 'ในงานรอบนี้',
+    noActivity: 'รอบนี้ยังไม่มีงาน',
+    open: 'เปิด',
+    close: 'ปิด',
+    failed: 'ไม่ผ่าน',
   },
 }[LANG];
 
@@ -711,6 +730,17 @@ function buildStation(role, index) {
   const tagEl = document.createElement('div');
   tagEl.className = 'tag';
   tagEl.style.borderColor = role.css;
+  // The tag opens the desk's activity list (see showActivity).
+  tagEl.tabIndex = 0;
+  tagEl.setAttribute('role', 'button');
+  tagEl.title = `${role.title}: ${TEXT.showActivity}`;
+  tagEl.addEventListener('click', () => showActivity(role.id));
+  tagEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      showActivity(role.id);
+    }
+  });
   tagLayer.appendChild(tagEl);
 
   const obj = {
@@ -783,7 +813,7 @@ function drawBoard() {
     const detail = r.state === 'working' ? r.note ?? `${r.tool}${r.detail ? ` · ${r.detail}` : ''}` : r.state === 'done' || r.done ? 'Finished' : role.title;
     g.fillText(truncate(detail, 24), x + 26, y + 52);
 
-    const chip = r.state === 'working' ? ['DOING', role.css] : r.state === 'done' || r.done ? ['DONE', '#3fbf74'] : ['TO DO', '#9aa0ab'];
+    const chip = r.state === 'working' ? ['DOING', role.css] : r.failed ? ['FAILED', '#d9473b'] : r.state === 'done' || r.done ? ['DONE', '#3fbf74'] : ['TO DO', '#9aa0ab'];
     g.fillStyle = chip[1];
     g.beginPath();
     g.roundRect(x + cardW - 104, y + 8, 92, 28, 14);
@@ -827,7 +857,10 @@ function drawScreen() {
   const ended = Boolean(session?.endedAt);
   const elapsed = session?.startedAt ? formatElapsed((session.endedAt ?? Date.now()) - session.startedAt) : '00:00';
 
-  const [accent, title, chip] = role
+  const waiting = session?.waiting;
+  const [accent, title, chip] = waiting
+    ? ['#e8a317', TEXT.needsYou, 'NEEDS YOU']
+    : role
     ? [role.css, `${role.label} · ${role.title}`, 'WORKING']
     : ended
       ? ['#3fbf74', 'Task finished', 'DONE']
@@ -847,7 +880,21 @@ function drawScreen() {
   g.fillText(`${chip}  ${elapsed}`, SCREEN_W - 32, 44);
   g.textAlign = 'left';
 
-  if (role) {
+  if (waiting) {
+    g.fillStyle = '#ffffff';
+    g.font = `700 52px ${FONT}`;
+    g.fillText(TEXT.answerIn, 32, 152);
+    if (waiting.tool) {
+      g.fillStyle = '#f5d48a';
+      g.font = `500 32px ui-monospace, Consolas, monospace`;
+      g.fillText(truncate(`${waiting.tool}${waiting.detail ? ` · ${waiting.detail}` : ''}`, 46), 32, 214);
+    }
+    // A slow pulse along the bottom so it reads as "waiting", not "stuck".
+    g.fillStyle = accent;
+    g.globalAlpha = 0.5 + 0.5 * Math.sin(performance.now() / 300);
+    g.fillRect(32, 300, SCREEN_W - 64, 14);
+    g.globalAlpha = 1;
+  } else if (role) {
     // Claude's own summary when it gave one, otherwise the tool name.
     g.fillStyle = '#ffffff';
     g.font = `700 58px ${FONT}`;
@@ -880,6 +927,86 @@ function drawScreen() {
   }
   screenTexture.needsUpdate = true;
 }
+
+// ---------- desk activity ----------
+
+// Lists what one desk did in the current task: newest first, failures marked. Inside VS Code a file opens
+// in the editor (the extension checks the path); in a browser the path is only shown.
+const activityEl = document.createElement('aside');
+activityEl.className = 'activity';
+activityEl.hidden = true;
+document.body.appendChild(activityEl);
+let activityRole = null;
+const inVsCode = window.parent !== window;
+
+const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+async function showActivity(roleId) {
+  activityRole = roleId;
+  const role = roleById(roleId);
+  let entries = [];
+  try {
+    const res = await fetch(`/activity?session=${encodeURIComponent(snapshot.active ?? '')}`);
+    entries = ((await res.json())[roleId] ?? []).slice().reverse();
+  } catch {
+    // Shown as an empty list.
+  }
+  if (activityRole !== roleId) return;
+
+  const head = document.createElement('header');
+  head.style.borderColor = role.css;
+  const title = document.createElement('strong');
+  title.textContent = `${role.label} · ${TEXT.activityTitle}`;
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.textContent = '×';
+  close.title = TEXT.close;
+  close.addEventListener('click', hideActivity);
+  head.append(title, close);
+
+  const list = document.createElement('ol');
+  for (const e of entries) {
+    const item = document.createElement('li');
+    item.classList.toggle('failed', e.failed);
+    const meta = document.createElement('span');
+    meta.className = 'meta';
+    meta.textContent = `${clock(e.at)} · ${e.tool ?? ''}${e.failed ? ` · ✗ ${TEXT.failed}` : ''}`;
+    const what = document.createElement('span');
+    what.className = 'what';
+    what.textContent = e.note ?? e.detail ?? '';
+    item.append(meta, what);
+    if (e.note && e.detail) {
+      const detail = document.createElement('code');
+      detail.textContent = e.detail;
+      item.append(detail);
+    }
+    if (e.file && inVsCode) {
+      const open = document.createElement('button');
+      open.type = 'button';
+      open.textContent = TEXT.open;
+      open.title = e.file;
+      open.addEventListener('click', () => window.parent.postMessage({ type: 'it-office-3d:open', file: e.file }, '*'));
+      item.append(open);
+    }
+    list.append(item);
+  }
+  if (!entries.length) {
+    const empty = document.createElement('p');
+    empty.textContent = TEXT.noActivity;
+    list.append(empty);
+  }
+  activityEl.replaceChildren(head, list);
+  activityEl.hidden = false;
+}
+
+function hideActivity() {
+  activityRole = null;
+  activityEl.hidden = true;
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') hideActivity();
+});
 
 // ---------- PM (team lead) ----------
 
@@ -1096,8 +1223,16 @@ function updateLead(dt, t) {
   if (!(allDone && S.mode === 'idle')) lead.armR.rotation.z = 0;
   lead.head.rotation.y = S.mode === 'idle' ? Math.sin(t * 0.7) * 0.2 : 0;
 
+  // Claude is waiting on the user: the PM, back at the board, raises a hand.
+  const askingUser = Boolean(currentSession()?.waiting) && S.mode === 'idle';
+  if (askingUser) {
+    lead.armR.rotation.x = Math.PI - 0.25;
+    lead.armR.rotation.z = 0.15;
+    lead.head.rotation.y = 0;
+  }
+
   const roleName = S.task ? roleById(S.task.role).label : '';
-  leadTag.textContent =
+  leadTag.textContent = askingUser ? TEXT.pmWaiting :
     S.mode === 'walking' && S.task ? `PM · Heading to ${roleName}`
     : S.mode === 'talking' ? `PM · Briefing ${roleName}`
     : S.mode === 'walking' ? 'PM · Back to the board'
@@ -1125,6 +1260,7 @@ const isFinished = (r) => r.done || r.state === 'done';
 function tagText(role, r) {
   if (r.state === 'working') return `${role.label} · ${truncate(r.note ?? r.tool, 34)}`;
   if (r.state === 'done') return `${role.label} · Done`;
+  if (r.failed) return `${role.label} · ✗ ${TEXT.failed}`;
   return role.label;
 }
 
@@ -1172,9 +1308,11 @@ function applyState() {
       obj.tagEl.appendChild(mark);
     }
 
-    const glow = working ? obj.role.color : finished ? DONE_GREEN : 0x000000;
+    const failed = !working && r.failed;
+    obj.tagEl.classList.toggle('failed', failed);
+    const glow = working ? obj.role.color : failed ? FAILED_RED : finished ? DONE_GREEN : 0x000000;
     for (const part of [obj.logo, obj.bulb]) {
-      part.material.color.set(working || finished ? glow : 0xcccccc);
+      part.material.color.set(working || finished || failed ? glow : 0xcccccc);
       part.material.emissive.set(glow);
     }
   }
@@ -1427,7 +1565,7 @@ function queueFrame() {
 
 function scheduleFrame() {
   if (hiddenByHost || document.hidden) return;
-  const busy = leadState.mode !== 'idle' || objects.some((o) => o.state === 'working') || drag || performance.now() - lastInput < 1000;
+  const busy = leadState.mode !== 'idle' || objects.some((o) => o.state === 'working') || currentSession()?.waiting || drag || performance.now() - lastInput < 1000;
   if (busy) queueFrame();
   else frameTimer = setTimeout(queueFrame, IDLE_FRAME_MS);
 }
@@ -1474,6 +1612,7 @@ source.onmessage = (msg) => {
   applyState();
   updateTimer();
   wake();
+  if (activityRole) showActivity(activityRole);
 };
 
 setInterval(updateTimer, 250);

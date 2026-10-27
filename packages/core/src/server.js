@@ -192,6 +192,13 @@ export function startServer({ port = 0, preferredPort = null, idleExitMs = 0, on
       return;
     }
 
+    // What each desk did in a session's current task, for the desk popup.
+    if (req.method === 'GET' && url.pathname === '/activity') {
+      const id = url.searchParams.get('session');
+      send(res, 200, JSON.stringify(state.logs[id] ?? {}));
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/state') {
       send(res, 200, JSON.stringify(snapshotFor(url.searchParams.get('session'), url.searchParams.getAll('cwd'))));
       return;
