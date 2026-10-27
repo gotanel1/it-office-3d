@@ -2,7 +2,7 @@
   "name": "claude-code-3d",
   "displayName": "IT-Office-3D",
   "description": "Watch what Claude Code is doing as a live 3D scene in a VS Code panel. Local only, read only.",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "icon": "media/logo.png",
   "publisher": "gotanel1",
   "license": "MIT",
@@ -66,6 +66,16 @@
         "title": "Choose Session",
         "category": "IT-Office-3D",
         "icon": "$(list-selection)"
+      },
+      {
+        "command": "claudeCode3d.diagnostics",
+        "title": "Show Diagnostics",
+        "category": "IT-Office-3D"
+      },
+      {
+        "command": "claudeCode3d.installPlugin",
+        "title": "Install Claude Code Plugin",
+        "category": "IT-Office-3D"
       }
     ],
     "menus": {
@@ -81,7 +91,89 @@
           "group": "navigation@1"
         }
       ]
-    }
+    },
+    "configuration": {
+      "title": "IT-Office-3D",
+      "properties": {
+        "itOffice3d.language": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "en",
+            "th"
+          ],
+          "enumDescriptions": [
+            "Follow the VS Code display language (Thai when VS Code is in Thai, English otherwise)",
+            "English",
+            "Thai (ภาษาไทย)"
+          ],
+          "default": "auto",
+          "description": "Language of the speech bubbles and the wall screen."
+        }
+      }
+    },
+    "walkthroughs": [
+      {
+        "id": "getStarted",
+        "title": "Get started with IT-Office-3D",
+        "description": "Watch Claude Code work as a 3D IT office, in a few steps.",
+        "steps": [
+          {
+            "id": "installPlugin",
+            "title": "Install the Claude Code plugin",
+            "description": "The plugin reports what Claude does. Without it the office stays still.\n[Install in Terminal](command:claudeCode3d.installPlugin)",
+            "media": {
+              "markdown": "media/walkthrough/plugin.md"
+            },
+            "completionEvents": [
+              "onCommand:claudeCode3d.installPlugin"
+            ]
+          },
+          {
+            "id": "openPanel",
+            "title": "Open the office",
+            "description": "The office lives in a panel next to Terminal.\n[Open IT-Office-3D](command:claudeCode3d.open)",
+            "media": {
+              "markdown": "media/walkthrough/open.md"
+            },
+            "completionEvents": [
+              "onCommand:claudeCode3d.open",
+              "onView:claudeCode3d.scene"
+            ]
+          },
+          {
+            "id": "firstTask",
+            "title": "Give Claude a task",
+            "description": "Start a new Claude Code chat in this folder and ask for something. Each window follows its own project.\n[Choose Session](command:claudeCode3d.chooseSession)",
+            "media": {
+              "markdown": "media/walkthrough/task.md"
+            }
+          },
+          {
+            "id": "language",
+            "title": "Choose the language",
+            "description": "Speech bubbles and the wall screen in English or Thai. By default they follow VS Code.\n[Open the setting](command:workbench.action.openSettings?%22itOffice3d.language%22)",
+            "media": {
+              "markdown": "media/walkthrough/language.md"
+            },
+            "completionEvents": [
+              "onSettingChanged:itOffice3d.language"
+            ]
+          },
+          {
+            "id": "help",
+            "title": "If nothing moves",
+            "description": "Diagnostics show what the extension can see, without prompts or file contents.\n[Show Diagnostics](command:claudeCode3d.diagnostics)",
+            "media": {
+              "markdown": "media/walkthrough/help.md"
+            },
+            "completionEvents": [
+              "onCommand:claudeCode3d.diagnostics"
+            ]
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "node scripts/copy-core.mjs",

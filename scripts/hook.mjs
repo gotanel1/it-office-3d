@@ -60,7 +60,9 @@ try {
   const raw = await readStdin();
   if (raw.trim()) {
     const payload = redact(JSON.parse(raw));
-    const info = readInfo();
+    // Once per chat and per prompt, also make sure the server is not one left by an older version;
+    // tool events skip that extra request.
+    const info = ['SessionStart', 'UserPromptSubmit'].includes(payload.hook_event_name) ? await ensureServer({ wait: 3000 }) : readInfo();
     if (!(info?.port && (await send(info.port, payload)))) {
       // The server is not running yet (or moved): start it, then try once more.
       const started = await ensureServer({ wait: 3000 });

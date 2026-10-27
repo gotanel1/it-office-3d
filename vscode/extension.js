@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
+const crypto = require('node:crypto');
 
 const infoFile = path.join(os.homedir(), '.claude-code-3d', 'server.json');
 const VIEW_ID = 'claudeCode3d.scene';
@@ -37,20 +38,37 @@ function pluginInstalled(file = path.join(os.homedir(), '.claude', 'plugins', 'i
   }
 }
 
-async function health(port) {
+// The server version the bundled engine needs; see API in packages/core/src/server.js.
+const API = JSON.parse(fs.readFileSync(path.resolve(daemonFile(), '..', '..', 'package.json'), 'utf8')).sceneApi;
+const current = (h) => (h?.api ?? 1) >= API;
+
+// The server's health answer, or null when nothing (or something else) answers on that port.
+async function health(port, timeout = 500) {
   try {
-    const res = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(500) });
-    return (await res.json()).name === 'claude-code-3d';
+    const res = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(timeout) });
+    const h = await res.json();
+    return h.name === 'claude-code-3d' ? h : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-// Same discovery as scripts/lib.mjs. VS Code's own binary runs the server as plain Node, so users need no
-// separate Node.js for the viewer (the plugin's hooks still need one).
+// Same discovery as scripts/lib.mjs, including stopping a server left by an older version. VS Code's own
+// binary runs the server as plain Node, so users need no separate Node.js for the viewer (the plugin's
+// hooks still need one).
 async function ensureServer(wait = 8000) {
   let info = readInfo();
-  if (info?.port && (await health(info.port))) return info;
+  const h = info?.port ? await health(info.port) : null;
+  if (h && current(h)) return info;
+  if (h) {
+    try {
+      process.kill(h.pid);
+    } catch {
+      // Already gone, or not ours to stop: the new server then takes another port.
+    }
+    const until = Date.now() + 2000;
+    while (Date.now() < until && (await health(h.port, 200))) await new Promise((resolve) => setTimeout(resolve, 100));
+  }
   const child = spawn(process.execPath, [daemonFile()], {
     detached: true,
     stdio: 'ignore',
@@ -63,7 +81,7 @@ async function ensureServer(wait = 8000) {
   while (Date.now() < end) {
     await new Promise((resolve) => setTimeout(resolve, 150));
     info = readInfo();
-    if (info?.port && (await health(info.port))) return info;
+    if (info?.port && current(await health(info.port))) return info;
   }
   return null;
 }
@@ -74,6 +92,12 @@ async function ensureServer(wait = 8000) {
 const follow = { session: '' };
 const workspaceRoots = () => (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
 
+// 'en' or 'th' for the scene's speech bubbles and wall screen.
+function sceneLanguage(setting = vscode.workspace.getConfiguration('itOffice3d').get('language', 'auto'), uiLanguage = vscode.env.language) {
+  if (setting === 'en' || setting === 'th') return setting;
+  return uiLanguage.toLowerCase().startsWith('th') ? 'th' : 'en';
+}
+
 function sceneQuery(session, roots) {
   const params = new URLSearchParams({ session });
   for (const root of roots) params.append('cwd', root);
@@ -81,12 +105,18 @@ function sceneQuery(session, roots) {
 }
 
 function page(body, frameSrc = null) {
-  const csp = `default-src 'none'; style-src 'unsafe-inline';${frameSrc ? ` frame-src ${frameSrc};` : ''}`;
+  const nonce = crypto.randomBytes(16).toString('base64');
+  const csp = `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';${frameSrc ? ` frame-src ${frameSrc};` : ''}`;
+  // Passes "panel shown / hidden" on to the scene, which stops drawing while hidden.
+  const relay = `window.addEventListener('message', (e) => {
+  const frame = document.querySelector('iframe');
+  if (frame && e.data && e.data.type === 'it-office-3d:visible') frame.contentWindow.postMessage(e.data, '*');
+});`;
   return `<!doctype html>
 <html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}">
 <style>html,body{margin:0;padding:0;height:100%;overflow:hidden}iframe{border:0;width:100%;height:100%;display:block}
 p{font-family:var(--vscode-font-family);font-size:var(--vscode-font-size);color:var(--vscode-descriptionForeground);padding:0 1em}</style>
-</head><body>${body}</body></html>`;
+</head><body>${body}<script nonce="${nonce}">${relay}</script></body></html>`;
 }
 
 class SceneView {
@@ -96,6 +126,7 @@ class SceneView {
     view.onDidDispose(() => {
       this.view = undefined;
     });
+    view.onDidChangeVisibility(() => view.webview.postMessage({ type: 'it-office-3d:visible', visible: view.visible }));
     return this.load();
   }
 
@@ -112,7 +143,7 @@ class SceneView {
     // shortcut: works for local VS Code only; remote windows forward the port under another host, which the
     // server's Host check refuses. Upgrade by letting the server accept the forwarded host if remote is needed.
     const base = (await vscode.env.asExternalUri(vscode.Uri.parse(info.url))).toString();
-    const url = `${base}?embed&${sceneQuery(follow.session, workspaceRoots())}`;
+    const url = `${base}?embed&lang=${sceneLanguage()}&${sceneQuery(follow.session, workspaceRoots())}`;
     view.webview.html = page(`<iframe src="${url}" title="IT-Office-3D"></iframe>`, new URL(base).origin);
   }
 }
@@ -188,14 +219,85 @@ async function offerPluginInstall() {
     'Install in Terminal',
     'Copy commands',
   );
-  if (choice === 'Install in Terminal') {
-    const terminal = vscode.window.createTerminal('IT-Office-3D');
-    terminal.show();
-    INSTALL.forEach((cmd) => terminal.sendText(cmd));
-    vscode.window.showInformationMessage('When the install finishes, run "Reload Window" and start a new Claude Code chat.');
-  } else if (choice === 'Copy commands') {
-    await vscode.env.clipboard.writeText(INSTALL.join('\n'));
+  if (choice === 'Install in Terminal') installPlugin();
+  else if (choice === 'Copy commands') await vscode.env.clipboard.writeText(INSTALL.join('\n'));
+}
+
+function installPlugin() {
+  const terminal = vscode.window.createTerminal('IT-Office-3D');
+  terminal.show();
+  INSTALL.forEach((cmd) => terminal.sendText(cmd));
+  vscode.window.showInformationMessage('When the install finishes, run "Reload Window" and start a new Claude Code chat.');
+}
+
+// The plugin's installed version from Claude Code's plugin list, or null.
+function pluginVersion(file = path.join(os.homedir(), '.claude', 'plugins', 'installed_plugins.json')) {
+  try {
+    const plugins = JSON.parse(fs.readFileSync(file, 'utf8')).plugins ?? {};
+    const id = Object.keys(plugins).find((key) => key.startsWith(`${PLUGIN}@`));
+    return id ? [plugins[id]].flat()[0]?.version ?? 'unknown' : null;
+  } catch {
+    return null;
   }
+}
+
+// Plain-text report for bug reports. Built from facts gathered below, so it can be tested without VS Code.
+function formatDiagnostics(f) {
+  const server = !f.health ? 'not running' : `pid ${f.health.pid}, port ${f.health.port}, api ${f.health.api ?? 1}${(f.health.api ?? 1) >= f.api ? '' : ' (OUTDATED: needs ' + f.api + ')'}`;
+  const lines = [
+    'IT-Office-3D diagnostics. No prompts, file contents or command output are included.',
+    '',
+    `Extension      ${f.extension}  (VS Code ${f.vscode}, ${f.platform}, scene language ${f.language})`,
+    `Plugin         ${f.plugin === null ? 'NOT FOUND in Claude Code (the scene will not move)' : f.plugin}`,
+    `Server         ${server}`,
+    `Workspace      ${f.roots.length ? f.roots.join(' | ') : '(no folder open: follows the newest chat anywhere)'}`,
+    `Following      ${f.follow || 'this workspace'}`,
+    `Showing        ${f.active ? `${f.active.slice(0, 8)} in ${f.sessions[f.active]?.cwd ?? '?'}` : 'no chat yet'}`,
+    '',
+    'Chats the server has seen:',
+    ...(Object.keys(f.sessions).length
+      ? Object.entries(f.sessions).map(([id, s]) => `  ${id.slice(0, 8)}  ${s.cwd ?? '?'}  last active ${ago(f.now - s.updatedAt)}`)
+      : ['  (none)']),
+    '',
+    'Last events (newest last):',
+    ...(f.events.length ? f.events.map((e) => `  ${e.at}  ${e.event}${e.tool ? ` ${e.tool}` : ''}  ${e.session}`) : ['  (none)']),
+  ];
+  return lines.join('\n');
+}
+
+let output;
+async function showDiagnostics(context) {
+  const info = readInfo();
+  const h = info?.port ? await health(info.port) : null;
+  const get = async (route) => {
+    try {
+      return await (await fetch(`http://127.0.0.1:${h.port}${route}`, { signal: AbortSignal.timeout(1000) })).json();
+    } catch {
+      return null;
+    }
+  };
+  const snap = h ? await get(`/state?${sceneQuery(follow.session, workspaceRoots())}`) : null;
+  const events = h ? (await get('/debug/events')) ?? [] : [];
+  output ??= vscode.window.createOutputChannel('IT-Office-3D');
+  output.clear();
+  output.appendLine(
+    formatDiagnostics({
+      extension: context.extension.packageJSON.version,
+      vscode: vscode.version,
+      platform: `${process.platform}-${process.arch}`,
+      language: sceneLanguage(),
+      plugin: pluginVersion(),
+      health: h,
+      api: API,
+      roots: workspaceRoots(),
+      follow: follow.session,
+      active: snap?.active ?? null,
+      sessions: snap?.sessions ?? {},
+      events: events.slice(-15),
+      now: Date.now(),
+    }),
+  );
+  output.show(true);
 }
 
 function ago(ms) {
@@ -257,12 +359,23 @@ function activate(context) {
     vscode.commands.registerCommand('claudeCode3d.open', () => vscode.commands.executeCommand(`${VIEW_ID}.focus`)),
     vscode.commands.registerCommand('claudeCode3d.reset', reset),
     vscode.commands.registerCommand('claudeCode3d.chooseSession', () => chooseSession(context, scene)),
+    vscode.commands.registerCommand('claudeCode3d.diagnostics', () => showDiagnostics(context)),
+    vscode.commands.registerCommand('claudeCode3d.installPlugin', installPlugin),
     // A changed folder list changes which chats this window follows.
     vscode.workspace.onDidChangeWorkspaceFolders(() => scene.load()),
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('itOffice3d.language')) scene.load();
+    }),
   );
-  offerPluginInstall();
+  // First run: the walkthrough covers the plugin too, so it replaces the warning once.
+  if (!context.globalState.get('welcomed')) {
+    context.globalState.update('welcomed', true);
+    vscode.commands.executeCommand('workbench.action.openWalkthrough', `${context.extension.id}#getStarted`, false);
+  } else {
+    offerPluginInstall();
+  }
 }
 
 function deactivate() {}
 
-module.exports = { activate, deactivate, describe, pluginInstalled, sceneQuery };
+module.exports = { activate, deactivate, describe, pluginInstalled, pluginVersion, sceneQuery, sceneLanguage, formatDiagnostics };

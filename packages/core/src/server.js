@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +9,10 @@ import { TranscriptTail, isAllowedTranscriptPath, subtractUsage } from './transc
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(here, '..', 'public');
+
+// `sceneApi` in package.json goes up when hooks or viewers need something an older server lacks
+// (2: sessions picked per folder). Starters replace a running server whose number is lower.
+export const API = JSON.parse(readFileSync(path.join(here, '..', 'package.json'), 'utf8')).sceneApi;
 
 const MAX_BODY_BYTES = 256 * 1024;
 const TICK_MS = 2000;
@@ -178,7 +183,7 @@ export function startServer({ port = 0, preferredPort = null, idleExitMs = 0, on
     }
 
     if (req.method === 'GET' && url.pathname === '/health') {
-      send(res, 200, JSON.stringify({ ok: true, name: 'claude-code-3d', pid: process.pid, port: actualPort }));
+      send(res, 200, JSON.stringify({ ok: true, name: 'claude-code-3d', api: API, pid: process.pid, port: actualPort }));
       return;
     }
 

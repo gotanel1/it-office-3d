@@ -1,21 +1,27 @@
 name: test
 on:
   push:
+    branches: [main]
   pull_request:
 jobs:
   test:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [18, 22]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
       - run: npm test
         working-directory: packages/core
+      # The plugin as Claude Code runs it: replaces an old server, takes hook events, separates sessions.
+      - run: node scripts/smoke.mjs
       - run: npm test
         working-directory: vscode
+      # vsce needs Node 22.
       - run: npm run package
+        if: matrix.node == 22
         working-directory: vscode

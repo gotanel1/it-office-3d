@@ -123,6 +123,77 @@ function canvasTexture(canvas) {
 
 const FONT = 'system-ui, "Segoe UI", "Noto Sans Thai", sans-serif';
 
+// Speech and screen text in English or Thai: ?lang= (VS Code passes its setting), else the browser's language.
+const LANG = (new URLSearchParams(location.search).get('lang') || navigator.language || 'en').toLowerCase().startsWith('th') ? 'th' : 'en';
+const TEXT = {
+  en: {
+    phrases: {
+      'Reading prompt': 'New request in. Gather the requirements first, please.',
+      AskUserQuestion: 'Please check with the client what they need.',
+      Read: 'Please read this file.',
+      Grep: 'Please search the code for this.',
+      Glob: 'Please list these files.',
+      WebSearch: 'Please look this up on the web.',
+      WebFetch: 'Please pull the details from this page.',
+      TodoWrite: 'Please break this into steps.',
+      EnterPlanMode: 'Let us plan before we build.',
+      ExitPlanMode: 'The plan is ready, show it to the client.',
+      NotebookEdit: 'Please update this notebook.',
+    },
+    desks: {
+      BA: 'Please talk to the client.',
+      SA: 'Please analyse this part of the system.',
+      Architect: 'Please design the structure.',
+      UX: 'Please polish how this looks.',
+      Dev: 'Please write the code for this.',
+      DBA: 'Please check the database.',
+      QA: 'Please test this, I need results fast.',
+      DevOps: 'Please handle the repo and the machines.',
+      Security: 'Please check that this is secure.',
+      Writer: 'Please write this up.',
+    },
+    fallback: 'Please take care of this.',
+    ask: (name, phrase) => `${name}, ${phrase[0].toLowerCase()}${phrase.slice(1)}`,
+    praise: (name) => `${name}, great work, thank you!`,
+    wrapUp: (name) => `${name}, send the summary to the client!`,
+    finished: 'All done',
+    waiting: 'Waiting for Claude Code',
+  },
+  th: {
+    phrases: {
+      'Reading prompt': 'งานใหม่เข้ามาแล้ว ช่วยเก็บ requirement ก่อนนะ',
+      AskUserQuestion: 'ช่วยถามลูกค้าให้ชัดหน่อย',
+      Read: 'ช่วยอ่านไฟล์นี้หน่อย',
+      Grep: 'ช่วยค้นหาในโค้ดให้หน่อย',
+      Glob: 'ช่วยหารายชื่อไฟล์ให้หน่อย',
+      WebSearch: 'ช่วยค้นข้อมูลบนเว็บหน่อย',
+      WebFetch: 'ช่วยดึงข้อมูลจากหน้าเว็บนี้หน่อย',
+      TodoWrite: 'ช่วยแตกงานเป็นขั้นตอนหน่อย',
+      EnterPlanMode: 'ช่วยวางแผนก่อนลงมือนะ',
+      ExitPlanMode: 'แผนพร้อมแล้ว ส่งให้ลูกค้าดูเลย',
+      NotebookEdit: 'ช่วยแก้ notebook ตัวนี้ที',
+    },
+    desks: {
+      BA: 'ช่วยคุยกับลูกค้าหน่อย',
+      SA: 'ช่วยวิเคราะห์ระบบตรงนี้หน่อย',
+      Architect: 'ช่วยออกแบบโครงสร้างหน่อย',
+      UX: 'ช่วยปรับหน้าตาตรงนี้ที',
+      Dev: 'ช่วยเขียนโค้ดตรงนี้ที',
+      DBA: 'ช่วยดูฐานข้อมูลหน่อย',
+      QA: 'ช่วยทดสอบให้หน่อย ขอผลด่วน',
+      DevOps: 'ช่วยจัดการ repo กับเครื่องหน่อย',
+      Security: 'ช่วยเช็กความปลอดภัยหน่อย',
+      Writer: 'ช่วยเขียนเอกสารนี้หน่อย',
+    },
+    fallback: 'ช่วยจัดการงานนี้หน่อย',
+    ask: (name, phrase) => `${name} ${phrase}`,
+    praise: (name) => `${name} เยี่ยมมาก ขอบคุณนะ`,
+    wrapUp: (name) => `${name} สรุปคำตอบส่งให้ลูกค้าได้เลย!`,
+    finished: 'งานเสร็จแล้ว',
+    waiting: 'รอรับงานจาก Claude Code',
+  },
+}[LANG];
+
 function truncate(text, max) {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
@@ -799,7 +870,7 @@ function drawScreen() {
   } else {
     g.fillStyle = '#ffffff';
     g.font = `700 58px ${FONT}`;
-    g.fillText(ended ? 'งานเสร็จแล้ว' : 'รอรับงานจาก Claude Code', 32, 160);
+    g.fillText(ended ? TEXT.finished : TEXT.waiting, 32, 160);
     const t = session?.tokens;
     if (ended && t) {
       g.fillStyle = '#9aa3b5';
@@ -858,32 +929,9 @@ const leadState = {
 lead.root.position.copy(HOME);
 lead.root.rotation.y = HOME_YAW;
 
-// What the PM says when handing a task over. Tool-specific lines first, then one per desk.
-const PHRASES = {
-  'Reading prompt': 'งานใหม่เข้ามาแล้ว ช่วยเก็บ requirement ก่อนนะ',
-  AskUserQuestion: 'ช่วยถามลูกค้าให้ชัดหน่อย',
-  Read: 'ช่วยอ่านไฟล์นี้หน่อย',
-  Grep: 'ช่วยค้นหาในโค้ดให้หน่อย',
-  Glob: 'ช่วยหารายชื่อไฟล์ให้หน่อย',
-  WebSearch: 'ช่วยค้นข้อมูลบนเว็บหน่อย',
-  WebFetch: 'ช่วยดึงข้อมูลจากหน้าเว็บนี้หน่อย',
-  TodoWrite: 'ช่วยแตกงานเป็นขั้นตอนหน่อย',
-  EnterPlanMode: 'ช่วยวางแผนก่อนลงมือนะ',
-  ExitPlanMode: 'แผนพร้อมแล้ว ส่งให้ลูกค้าดูเลย',
-  NotebookEdit: 'ช่วยแก้ notebook ตัวนี้ที',
-};
-const DESK_PHRASES = {
-  BA: 'ช่วยคุยกับลูกค้าหน่อย',
-  SA: 'ช่วยวิเคราะห์ระบบตรงนี้หน่อย',
-  Architect: 'ช่วยออกแบบโครงสร้างหน่อย',
-  UX: 'ช่วยปรับหน้าตาตรงนี้ที',
-  Dev: 'ช่วยเขียนโค้ดตรงนี้ที',
-  DBA: 'ช่วยดูฐานข้อมูลหน่อย',
-  QA: 'ช่วยทดสอบให้หน่อย ขอผลด่วน',
-  DevOps: 'ช่วยจัดการ repo กับเครื่องหน่อย',
-  Security: 'ช่วยเช็กความปลอดภัยหน่อย',
-  Writer: 'ช่วยเขียนเอกสารนี้หน่อย',
-};
+// What the PM says when handing a task over: tool-specific lines first, then one per desk.
+const PHRASES = TEXT.phrases;
+const DESK_PHRASES = TEXT.desks;
 
 const roleById = (id) => ROLES.find((r) => r.id === id);
 
@@ -906,13 +954,13 @@ function buildPath(from, to) {
 
 function bubbleTextFor(task) {
   const name = roleById(task.role).label;
-  if (task.type === 'praise') return [`${name} เยี่ยมมาก ขอบคุณนะ`, ''];
-  if (task.type === 'wrapUp') return [`${name} สรุปคำตอบส่งให้ลูกค้าได้เลย!`, ''];
+  if (task.type === 'praise') return [TEXT.praise(name), ''];
+  if (task.type === 'wrapUp') return [TEXT.wrapUp(name), ''];
   const line2 = task.tool === 'Reading prompt' ? '' : `${task.tool}${task.detail ? ` · ${truncate(task.detail, 34)}` : ''}`;
   // Claude's own summary of the call says what is really being done; the stock phrase is only a fallback.
   if (task.note) return [`${name}: ${truncate(task.note, 70)}`, line2];
-  const phrase = PHRASES[task.tool] ?? DESK_PHRASES[task.role] ?? 'ช่วยจัดการงานนี้หน่อย';
-  return [`${name} ${phrase}`, line2];
+  const phrase = PHRASES[task.tool] ?? DESK_PHRASES[task.role] ?? TEXT.fallback;
+  return [TEXT.ask(name, phrase), line2];
 }
 
 function goHome() {
@@ -1344,6 +1392,7 @@ function animateWorker(obj, t) {
 }
 
 function frame() {
+  frameQueued = false;
   const now = performance.now();
   const dt = Math.min((now - lastFrame) / 1000, 0.1);
   lastFrame = now;
@@ -1359,8 +1408,47 @@ function frame() {
 
   renderer.render(scene, camera);
   updateOverlays();
+  scheduleFrame();
+}
+
+// Full speed only while something moves; a quiet office redraws a few times a second, and a hidden one
+// (browser tab in the background, or the VS Code panel behind another tab) not at all.
+const IDLE_FRAME_MS = 125;
+let hiddenByHost = false;
+let frameTimer = null; // the idle wait before the next frame
+let frameQueued = false; // a requestAnimationFrame is pending
+let lastInput = 0;
+
+function queueFrame() {
+  frameTimer = null;
+  frameQueued = true;
   requestAnimationFrame(frame);
 }
+
+function scheduleFrame() {
+  if (hiddenByHost || document.hidden) return;
+  const busy = leadState.mode !== 'idle' || objects.some((o) => o.state === 'working') || drag || performance.now() - lastInput < 1000;
+  if (busy) queueFrame();
+  else frameTimer = setTimeout(queueFrame, IDLE_FRAME_MS);
+}
+
+// Called on any input or new state, so the next frame comes at full speed.
+function wake() {
+  lastInput = performance.now();
+  if (frameQueued) return;
+  clearTimeout(frameTimer);
+  scheduleFrame();
+}
+
+for (const type of ['pointerdown', 'pointermove', 'wheel']) canvasEl.addEventListener(type, wake, { passive: true });
+document.addEventListener('visibilitychange', wake);
+// The VS Code extension says when its panel is shown or hidden: the page keeps running behind a hidden
+// panel, so the browser alone cannot tell. The message only pauses drawing, so any sender is harmless.
+window.addEventListener('message', (e) => {
+  if (e.data?.type !== 'it-office-3d:visible') return;
+  hiddenByHost = !e.data.visible;
+  wake();
+});
 
 function resize() {
   const w = window.innerWidth;
@@ -1372,10 +1460,11 @@ function resize() {
 }
 
 window.addEventListener('resize', resize);
+window.addEventListener('resize', wake);
 resize();
 drawBoard();
 drawScreen();
-requestAnimationFrame(frame);
+wake();
 
 const source = new EventSource(eventsUrl());
 source.onmessage = (msg) => {
@@ -1384,6 +1473,7 @@ source.onmessage = (msg) => {
   snapshot = next;
   applyState();
   updateTimer();
+  wake();
 };
 
 setInterval(updateTimer, 250);

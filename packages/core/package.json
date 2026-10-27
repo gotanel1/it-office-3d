@@ -1,6 +1,7 @@
 {
   "name": "claude-code-3d",
   "version": "0.1.0",
+  "sceneApi": 2,
   "description": "3D office that shows what Claude Code is doing in real time",
   "private": true,
   "license": "MIT",

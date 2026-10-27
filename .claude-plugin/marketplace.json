@@ -9,7 +9,7 @@
       "name": "it-office-3d",
       "source": ".",
       "description": "Watch what Claude Code is doing as a live 3D scene. Local only, read only.",
-      "version": "0.2.4",
+      "version": "0.3.0",
       "category": "monitoring",
       "tags": [
         "visualization",

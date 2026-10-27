@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { startServer } from './server.js';
+import { startServer, API } from './server.js';
 
 const dataDir = path.join(os.homedir(), '.claude-code-3d');
 const infoFile = path.join(dataDir, 'server.json');
@@ -25,10 +25,13 @@ function pidAlive(pid) {
   }
 }
 
+// An older server does not count: this one starts anyway (on another port if that one is still held)
+// and takes over server.json.
 async function serverAnswers(port) {
   try {
     const res = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(600) });
-    return (await res.json()).name === 'claude-code-3d';
+    const h = await res.json();
+    return h.name === 'claude-code-3d' && (h.api ?? 1) >= API;
   } catch {
     return false;
   }

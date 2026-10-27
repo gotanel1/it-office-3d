@@ -7,9 +7,9 @@ Local only. Read only. Nothing leaves your computer. Free, MIT licensed. Created
 
 [ภาษาไทย (Thai)](README.th.md)
 
-![The IT department office](docs/images/it-office.jpeg)
+![The IT department office at work](docs/images/demo.gif)
 
-The speech bubbles are written in Thai; the tool name and the file or command are always shown in English underneath.
+The speech bubbles and the wall screen are in English or Thai (VS Code setting **IT-Office-3D: Language**, or `?lang=en` / `?lang=th` in the browser). Tool names, files and commands are always shown as Claude wrote them.
 
 ---
 

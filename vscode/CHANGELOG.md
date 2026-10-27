@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+- English and Thai: the speech bubbles and the wall screen follow the new **IT-Office-3D: Language** setting (by default, the VS Code language).
+- A server left running by an older version is replaced by itself, so new features work without stopping anything by hand.
+- **Show Diagnostics** lists the plugin and server versions, the chats seen and the last events, for bug reports. No prompts or file contents.
+- A Get Started walkthrough on first install, and an **Install Claude Code Plugin** command.
+- Lighter on your computer: no drawing while the panel is hidden, and a slower frame rate when nobody is working.
+
 ## 0.3.5
 - Each VS Code window follows only the Claude Code chats running in its own workspace folders, so chats in other projects no longer move this window's scene.
 - New **Choose Session** button on the panel (and command) to pin the window to one chat, or go back to following the workspace.
