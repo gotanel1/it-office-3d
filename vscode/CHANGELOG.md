@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+- **Codex approval explained:** the extension page shows how to read Codex's `/hooks` screen (**Active/Installed** counts, **Enter** on an event to approve the it-office-3d hook), and that Codex asks again after each office update.
+- No code changes.
+
 ## 1.2.0
 - **Connect AIs:** one command (and the first-run prompt) finds Claude Code, Codex and Antigravity on this computer and connects only the ones that are not connected yet, in a terminal you can watch. Replaces **Install Claude Code Plugin**.
 - **Antigravity without a clone:** the extension carries the hook scripts and keeps a copy in `~/.claude-code-3d/hook`, refreshed after each update, so Antigravity's hook keeps working when VS Code replaces the extension folder.

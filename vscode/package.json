@@ -2,7 +2,7 @@
   "name": "claude-code-3d",
   "displayName": "IT-Office-3D",
   "description": "Watch Claude Code, Codex and Antigravity work in a cozy 2.5D office with live teammates, task status and activity. Local only, read only.",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "icon": "media/logo.png",
   "publisher": "gotanel1",
   "license": "MIT",
