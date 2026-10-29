@@ -394,18 +394,12 @@ test('each AI gets its newest session in the shared office, or only the picked o
   assert.deepEqual(crewFor(s, 'x1'), { codex: 'x1' });
 });
 
-test('connecting Codex or Antigravity keeps their other hooks and can be undone', () => {
+test('connecting Antigravity keeps its other hooks and can be undone', () => {
   const other = { hooks: [{ type: 'command', command: 'lint.sh' }] };
-  const codex = withHook({ hooks: { Stop: [other] }, extra: 1 }, 'codex');
-  assert.equal(codex.extra, 1);
-  assert.equal(codex.hooks.Stop.length, 2);
-  assert.match(codex.hooks.PreToolUse[0].hooks[0].command, /hook\.mjs" --agent codex$/);
-  // Connecting twice does not add the hook twice; removing leaves only the user's own hooks.
-  assert.deepEqual(withHook(codex, 'codex'), codex);
-  assert.deepEqual(withHook(codex, 'codex', true), { hooks: { Stop: [other] }, extra: 1 });
-
   const ag = withHook({ 'my-linter': { PostToolUse: [other] } }, 'antigravity');
   assert.match(ag['it-office-3d'].PreInvocation[0].hooks[0].command, /--agent antigravity --event PreInvocation$/);
   assert.deepEqual(ag['my-linter'], { PostToolUse: [other] });
+  // Connecting twice does not add the hook twice; removing leaves only the user's own hooks.
+  assert.deepEqual(withHook(ag, 'antigravity'), ag);
   assert.deepEqual(withHook(ag, 'antigravity', true), { 'my-linter': { PostToolUse: [other] } });
 });

@@ -156,14 +156,21 @@ On Windows you can also double-click `start-demo.bat`. It opens `http://127.0.0.
 
 ### Also watch Codex (GPT) and Antigravity
 
-The office shows all three AIs at once: Claude, GPT and Antigravity each have a lead who briefs their own AI's work, and the team list names the AI at each desk. From a clone of this repository, run once per AI:
+The office shows all three AIs at once: Claude, GPT and Antigravity each have a lead who briefs their own AI's work, and the team list names the AI at each desk. From a clone of this repository:
+
+**Codex** installs the office as a Codex plugin. Then open `codex`, type `/hooks` and approve the it-office-3d hooks once:
 
 ```
-node scripts/connect.mjs codex
+codex plugin marketplace add <path to this repository>
+codex plugin add it-office-3d@it-office-3d
+```
+
+**Antigravity** gets the hook in `~/.gemini/config/hooks.json`. Your other hooks are kept and the old file is saved as `hooks.json.bak`; add `--remove` to take it out again:
+
+```
 node scripts/connect.mjs antigravity
 ```
-
-This adds the office hook to `~/.codex/hooks.json` or `~/.gemini/config/hooks.json`, keeps your other hooks, and saves the old file as `hooks.json.bak`. Codex asks you to approve new hooks with `/hooks` the first time. Add `--remove` to take the hook out again. Antigravity has no permission event, so its lead cannot show **Needs you**.
+ Antigravity has no permission event, so its lead cannot show **Needs you**.
 
 ---
 

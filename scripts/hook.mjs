@@ -79,6 +79,7 @@ try {
   const input = raw.trim() && (agent === 'antigravity' ? fromAntigravity(arg('--event'), JSON.parse(raw)) : JSON.parse(raw));
   if (input) {
     const payload = redact(input);
+    log(`${agent} ${payload.hook_event_name} ${payload.session_id}`);
     // Once per chat and per prompt, also make sure the server is not one left by an older version;
     // tool events skip that extra request.
     const info = ['SessionStart', 'UserPromptSubmit'].includes(payload.hook_event_name) ? await ensureServer({ wait: 3000 }) : readInfo();

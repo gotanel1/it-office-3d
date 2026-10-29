@@ -1,9 +1,9 @@
-// Adds (or with --remove, takes out) this office's hook to Codex or Antigravity, so their work shows up
-// next to Claude Code's. Usage: node scripts/connect.mjs codex|antigravity [--remove]
+// Adds (or with --remove, takes out) this office's hook to Antigravity, so its work shows up next to
+// Claude Code's. Usage: node scripts/connect.mjs antigravity [--remove]
+// (Codex 0.147 does not read ~/.codex/hooks.json; it gets the hook from the Codex plugin in this repo.)
 //
-// Codex reads ~/.codex/hooks.json ({ hooks: { Event: [groups] } }); Antigravity reads
-// ~/.gemini/config/hooks.json ({ name: { Event: [groups] } }). Other hooks in those files are kept,
-// and the old file is copied to hooks.json.bak before it is replaced.
+// Antigravity reads ~/.gemini/config/hooks.json ({ name: { Event: [groups] } }). Other hooks in that file
+// are kept, and the old file is copied to hooks.json.bak before it is replaced.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -13,10 +13,6 @@ const hookScript = path.join(path.dirname(fileURLToPath(import.meta.url)), 'hook
 const NAME = 'it-office-3d';
 
 export const TARGETS = {
-  codex: {
-    file: path.join(os.homedir(), '.codex', 'hooks.json'),
-    events: ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PermissionRequest', 'SubagentStop', 'Stop'],
-  },
   antigravity: {
     file: path.join(os.homedir(), '.gemini', 'config', 'hooks.json'),
     // PreInvocation stands in for the prompt event Antigravity does not have.
@@ -24,22 +20,20 @@ export const TARGETS = {
   },
 };
 
-const command = (agent, event) => agent === 'antigravity'
-  ? `node "${hookScript}" --agent antigravity --event ${event}`
-  : `node "${hookScript}" --agent codex`;
+const command = (event) => `node "${hookScript}" --agent antigravity --event ${event}`;
 const ours = (group) => group?.hooks?.some((h) => String(h.command).includes(`--agent `) && String(h.command).includes('hook.mjs'));
 
 // The config with this office's hook for `agent` added (or removed), leaving every other hook alone.
 export function withHook(config, agent, remove = false) {
   const next = structuredClone(config ?? {});
-  const table = agent === 'codex' ? (next.hooks ??= {}) : (next[NAME] ??= {});
+  const table = (next[NAME] ??= {});
   for (const event of TARGETS[agent].events) {
     const groups = (table[event] ?? []).filter((g) => !ours(g));
-    if (!remove) groups.push({ hooks: [{ type: 'command', command: command(agent, event), timeout: 10 }] });
+    if (!remove) groups.push({ hooks: [{ type: 'command', command: command(event), timeout: 10 }] });
     if (groups.length) table[event] = groups;
     else delete table[event];
   }
-  if (agent === 'antigravity' && !Object.keys(table).length) delete next[NAME];
+  if (!Object.keys(table).length) delete next[NAME];
   return next;
 }
 
@@ -47,7 +41,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const agent = process.argv[2];
   const remove = process.argv.includes('--remove');
   if (!TARGETS[agent]) {
-    console.error('Usage: node scripts/connect.mjs codex|antigravity [--remove]');
+    console.error('Usage: node scripts/connect.mjs antigravity [--remove]');
     process.exit(1);
   }
   const { file } = TARGETS[agent];
@@ -65,5 +59,4 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${JSON.stringify(withHook(config, agent, remove), null, 2)}\n`);
   console.log(`${remove ? 'Removed the office hook from' : 'Added the office hook to'} ${file}`);
-  if (agent === 'codex' && !remove) console.log('Next: start Codex and approve the new hooks with /hooks.');
 }

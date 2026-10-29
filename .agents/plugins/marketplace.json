@@ -1,0 +1,20 @@
+{
+  "name": "it-office-3d",
+  "interface": {
+    "displayName": "IT-Office-3D"
+  },
+  "plugins": [
+    {
+      "name": "it-office-3d",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

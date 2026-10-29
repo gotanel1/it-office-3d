@@ -160,14 +160,21 @@ npm run demo
 
 ### ดูงานของ Codex (GPT) และ Antigravity ด้วย
 
-ออฟฟิศแสดง AI ทั้ง 3 ตัวพร้อมกัน: Claude, GPT และ Antigravity มีหัวหน้าของตัวเองที่เดินสั่งงานของ AI ตัวนั้น และรายชื่อทีมบอกว่า AI ตัวไหนใช้โต๊ะไหนอยู่ จากโฟลเดอร์ที่ clone รีโปนี้ไว้ ให้รันครั้งเดียวต่อ AI:
+ออฟฟิศแสดง AI ทั้ง 3 ตัวพร้อมกัน: Claude, GPT และ Antigravity มีหัวหน้าของตัวเองที่เดินสั่งงานของ AI ตัวนั้น และรายชื่อทีมบอกว่า AI ตัวไหนใช้โต๊ะไหนอยู่ จากโฟลเดอร์ที่ clone รีโปนี้ไว้:
+
+**Codex** ติดตั้งออฟฟิศเป็น plugin ของ Codex แล้วเปิด `codex` พิมพ์ `/hooks` และอนุญาต hook ของ it-office-3d หนึ่งครั้ง:
 
 ```
-node scripts/connect.mjs codex
+codex plugin marketplace add <ที่อยู่ของรีโปนี้>
+codex plugin add it-office-3d@it-office-3d
+```
+
+**Antigravity** ใส่ hook เข้า `~/.gemini/config/hooks.json` โดยเก็บ hook อื่นของคุณไว้ และสำรองไฟล์เดิมเป็น `hooks.json.bak` ถ้าจะเอาออกให้เติม `--remove`:
+
+```
 node scripts/connect.mjs antigravity
 ```
-
-คำสั่งนี้เพิ่ม hook ของออฟฟิศเข้า `~/.codex/hooks.json` หรือ `~/.gemini/config/hooks.json` โดยเก็บ hook อื่นของคุณไว้ และสำรองไฟล์เดิมเป็น `hooks.json.bak` ครั้งแรก Codex จะให้กดอนุญาต hook ใหม่ผ่าน `/hooks` ถ้าจะเอาออกให้เติม `--remove` ส่วน Antigravity ไม่มี event ตอนขออนุมัติ หัวหน้า Antigravity จึงขึ้น **รออนุมัติ** ไม่ได้
+ ส่วน Antigravity ไม่มี event ตอนขออนุมัติ หัวหน้า Antigravity จึงขึ้น **รออนุมัติ** ไม่ได้
 
 ---
 
