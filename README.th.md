@@ -174,7 +174,8 @@ codex plugin add it-office-3d@it-office-3d
 ```
 node scripts/connect.mjs antigravity
 ```
- ส่วน Antigravity ไม่มี event ตอนขออนุมัติ หัวหน้า Antigravity จึงขึ้น **รออนุมัติ** ไม่ได้
+
+ส่วน Antigravity ไม่มี event ตอนขออนุมัติ หัวหน้า Antigravity จึงขึ้น **รออนุมัติ** ไม่ได้
 
 ---
 

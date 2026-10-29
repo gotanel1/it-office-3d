@@ -170,7 +170,8 @@ codex plugin add it-office-3d@it-office-3d
 ```
 node scripts/connect.mjs antigravity
 ```
- Antigravity has no permission event, so its lead cannot show **Needs you**.
+
+Antigravity has no permission event, so its lead cannot show **Needs you**.
 
 ---
 
