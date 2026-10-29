@@ -1,40 +1,52 @@
 # IT-Office-3D for VS Code
 
-Watch Claude Code work in a cozy 2.5D office inside VS Code. Version 1.0.0 introduces a fixed-camera room, eleven chibi characters and a redesigned interface, with the same local activity tracking.
+Watch Claude Code, Codex and Antigravity work together in a cozy 2.5D office inside VS Code. Each AI has its own team lead, Claude, GPT and Antigravity, who walks over and briefs the desk doing its work.
 
 ![The IT department office](https://raw.githubusercontent.com/gotanel1/it-office-3d/v1.0.0/docs/images/office25d-preview.png)
 
 - **Panel:** an **IT-Office-3D** tab sits next to Terminal and Problems. Drag it to the sidebar if you prefer it there.
 - **Status bar:** shows who is working on what (`Dev · Edit`), or the token total when the turn ends. Hover for the busy desks, the time and the tokens; click to open the panel.
-- **Sessions:** each window follows the newest Claude Code chat in its own workspace folders. Use **Choose Session** on the panel toolbar to pin one chat instead.
-- **Team roster and task panel:** select any of the ten roles to inspect its activity. The task panel shows the busy desk, Claude's summary, the file or command, and turns amber when Claude waits for approval.
+- **Sessions:** each window shows the newest chat of every AI in its own workspace folders (**All AIs**). Use **Choose Session** on the panel toolbar to pin one chat instead.
+- **Task list:** the team list on the left shows which AI is working at each desk and what it is doing, for example `GPT · apply_patch · src/api.js`. Select a teammate to inspect its activity.
 - **Desk activity:** click a desk tag to list what it did in this task; **Open** shows a file in the editor. Failed calls are marked red.
 - **Notifications:** when Claude finishes or needs your approval, while VS Code is in the background (setting **IT-Office-3D: Notify**).
 - **Language:** English or Thai, by default the same as VS Code (setting **IT-Office-3D: Language**).
 - **Toolbar on the panel:** choose the session, reset the view.
-- **Command Palette:** `IT-Office-3D: Open`, `Choose Session`, `Reset`, `Show Diagnostics`, `Install Claude Code Plugin`.
+- **Command Palette:** `IT-Office-3D: Open`, `Choose Session`, `Reset`, `Show Diagnostics`, `Connect AIs`.
 - **Light on your computer:** the default scene uses local images without WebGL, pauses animation when hidden, and respects reduced motion.
 
-The scene moves only when the **IT-Office-3D plugin** is installed in Claude Code, because the plugin's hooks are what report Claude's work. Install it once from a terminal:
+## Connect your AIs (once)
 
-```
-claude plugin marketplace add gotanel1/it-office-3d
-claude plugin install it-office-3d@it-office-3d
-```
+The extension only draws the office. Each AI reports its work through a small hook, so the office stays still until the AIs you use are connected:
 
-If the plugin is missing, the status bar shows a warning sign and VS Code offers to install it for you. Then start a new Claude Code conversation (in the terminal or the Claude Code extension).
+1. Run **IT-Office-3D: Connect AIs** from the Command Palette (VS Code also offers it on first start). It finds Claude Code, Codex and Antigravity on this computer and, in a terminal you can watch, connects only the ones that are not connected yet.
+2. Run **Reload Window**.
+3. **Claude Code:** start a new chat (hooks load when a chat starts).
+4. **Codex:** open `codex`, type `/hooks` and approve the it-office-3d hooks. Codex skips new hooks until you do.
+5. **Antigravity:** nothing more to do.
+
+What **Connect AIs** runs, if you prefer to do it by hand:
+
+| AI | Commands |
+|---|---|
+| Claude Code | `claude plugin marketplace add gotanel1/it-office-3d` then `claude plugin install it-office-3d@it-office-3d` |
+| Codex | `codex plugin marketplace add gotanel1/it-office-3d` then `codex plugin add it-office-3d@it-office-3d` |
+| Antigravity | adds the hook to `~/.gemini/config/hooks.json` (your other hooks are kept, the old file is saved as `hooks.json.bak`); the hook runs from a copy in `~/.claude-code-3d/hook` |
+
+All three need [Node.js](https://nodejs.org) to run the hook. Antigravity cannot be connected when your user folder path contains a space, and it has no approval event, so its lead never shows **Waiting for your OK**.
 
 Local VS Code only: remote windows (SSH, WSL, containers) are not supported yet.
 
 ## Privacy
 
-Everything stays on your computer: no account, no key, no telemetry, no network calls. The plugin forwards only event names, the working folder, tool names and short fields such as a file path or command; prompts, file contents and tool output are dropped. Details in [SECURITY.md](https://github.com/gotanel1/it-office-3d/blob/main/SECURITY.md).
+Everything stays on your computer: no account, no key, no telemetry, no network calls. The hook forwards only event names, the working folder, tool names and short fields such as a file path or command; prompts, file contents and tool output are dropped. Details in [SECURITY.md](https://github.com/gotanel1/it-office-3d/blob/main/SECURITY.md).
 
 ## If nothing moves
 
-1. Start a **new** Claude Code chat: plugins load when a chat starts.
-2. Run **Reload Window** after installing the plugin.
-3. Run **IT-Office-3D: Show Diagnostics** and check the plugin and server lines. Paste the output into a [bug report](https://github.com/gotanel1/it-office-3d/issues/new?template=bug_report.yml) if you need help.
+1. Run **IT-Office-3D: Connect AIs**: it says which AIs are already connected.
+2. Run **Reload Window**, then start a **new** chat in your AI: hooks load when a chat starts.
+3. Codex only: check that `/hooks` lists the it-office-3d hooks as approved.
+4. Run **IT-Office-3D: Show Diagnostics** and check the plugin and server lines. Paste the output into a [bug report](https://github.com/gotanel1/it-office-3d/issues/new?template=bug_report.yml) if you need help.
 
 ## Install
 
@@ -48,7 +60,7 @@ For editors without the VS Code Marketplace (Cursor, Antigravity), download the 
 cd vscode
 npm test
 npm run package
-code --install-extension claude-code-3d-1.0.0.vsix
+code --install-extension claude-code-3d-1.2.0.vsix
 ```
 
 ## Release a new version
