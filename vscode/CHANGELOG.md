@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0
+- **No Node.js needed:** the hooks only use `curl` (built into Windows 10+, macOS and Linux): `sh hook.sh` for Claude Code, and on Windows a `curl.exe` call for Codex and Antigravity. The local server now trims each hook input to what the scene needs, as the old Node.js hook did, so prompts, file contents and tool output are still never kept.
+- **Antigravity connects from VS Code itself:** Connect AIs writes its hook directly, and an older hook is updated when VS Code starts.
+- **Codex reminder:** VS Code asks Codex (read only) whether the office hooks still wait for approval, at start and every 10 minutes, and shows **Open Codex** with the steps (`/hooks`, then `t`). Codex asks again after every office update.
+- **Server:** VS Code starts the office server when it opens, because the hooks no longer start it. Scene compatibility is now 7, so an older server is replaced.
+- **Validation:** 36 core and 15 extension tests, the smoke test, and live runs with Claude Code, Codex and the Antigravity CLI.
+
 ## 1.2.1
 - **Codex approval explained:** the extension page shows how to read Codex's `/hooks` screen (**Active/Installed** counts, **Enter** on an event to approve the it-office-3d hook), and that Codex asks again after each office update.
 - No code changes.

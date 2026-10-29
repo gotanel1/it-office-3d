@@ -4,6 +4,6 @@ IT-Office-3D only draws the office. Each AI reports what it is doing through a s
 
 - **Claude Code:** `claude plugin marketplace add gotanel1/it-office-3d` and `claude plugin install it-office-3d@it-office-3d`
 - **Codex:** `codex plugin marketplace add gotanel1/it-office-3d` and `codex plugin add it-office-3d@it-office-3d`
-- **Antigravity:** adds the hook to `~/.gemini/config/hooks.json`, keeping your other hooks and saving a `.bak`
+- **Antigravity:** the extension adds the hook to `~/.gemini/config/hooks.json`, keeping your other hooks and saving a `.bak`
 
-Then run **Reload Window**, start a new Claude Code chat, and in Codex type `/hooks` once to approve the it-office-3d hooks. Nothing leaves your computer: no account, no key, no telemetry.
+Then run **Reload Window**, start a new Claude Code chat, and in Codex type `/hooks` and press **t** to approve the it-office-3d hooks (the extension reminds you when they wait). No Node.js needed. Nothing leaves your computer: no account, no key, no telemetry.

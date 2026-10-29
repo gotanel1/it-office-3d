@@ -27,7 +27,7 @@ if (info) {
 } else {
   console.log('IT-Office-3D could not start its local server. Make sure Node.js 18 or newer is installed, then try again.');
 }
-// Let Node exit by itself, as in hook.mjs: process.exit() right after spawning the server aborts Node on
+// Let Node exit by itself: process.exit() right after spawning the server aborts Node on
 // Windows (libuv assertion in win/async.c).
 process.exitCode = info ? 0 : 1;
 setTimeout(() => process.exit(), 2000).unref();

@@ -169,5 +169,4 @@ test('Connect AIs finds each AI and knows which ones already report to the offic
   assert.deepEqual(status(), { claude: [true, true], codex: [true, true], antigravity: [true, true] });
 
   assert.match(connectCommands('codex').join('\n'), /codex plugin add it-office-3d@it-office-3d/);
-  assert.equal(connectCommands('antigravity', '/data/hook')[0], `node "${path.join('/data/hook', 'scripts', 'connect.mjs')}" antigravity`);
 });

@@ -14,7 +14,7 @@ fs.rmSync(path.join(ext, 'core'), { recursive: true, force: true });
 for (const part of ['src', 'public', 'package.json']) {
   fs.cpSync(path.join(repo, 'packages', 'core', part), path.join(bundle, 'packages', 'core', part), { recursive: true });
 }
-for (const file of ['hook.mjs', 'lib.mjs', 'connect.mjs']) {
+for (const file of ['hook.sh', 'connect.mjs']) {
   fs.cpSync(path.join(repo, 'scripts', file), path.join(bundle, 'scripts', file));
 }
 for (const file of ['LICENSE', 'THIRD-PARTY-NOTICES.md']) fs.copyFileSync(path.join(repo, file), path.join(ext, file));

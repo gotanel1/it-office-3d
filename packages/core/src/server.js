@@ -11,11 +11,13 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(here, '..', 'public');
 
 // `sceneApi` in package.json goes up when hooks or viewers need something an older server lacks
-// (2: sessions picked per folder; 3: the bundled 2.5D scene assets; 4: zoom and pan; 5: full-height layout with a task list; 6: several AIs at once).
+// (2: sessions picked per folder; 3: the bundled 2.5D scene assets; 4: zoom and pan; 5: full-height layout with a task list; 6: several AIs at once; 7: /hook/<agent> for hooks without Node.js).
 // Starters replace a running server whose number is lower so upgrades serve the new scene.
 export const API = JSON.parse(readFileSync(path.join(here, '..', 'package.json'), 'utf8')).sceneApi;
 
 const MAX_BODY_BYTES = 256 * 1024;
+// Hooks send the raw payload, which can carry a whole tool output; the server drops it after reading.
+const MAX_HOOK_BYTES = 32 * 1024 * 1024;
 const TICK_MS = 2000;
 // How long after a turn ends the transcript is still polled for the last responses.
 const TOKEN_GRACE_MS = 15000;
@@ -55,20 +57,21 @@ export function startServer({ port = 0, preferredPort = null, idleExitMs = 0, on
     res.end(body);
   };
 
-  const readBody = (req) =>
+  const readBody = (req, limit = MAX_BODY_BYTES) =>
     new Promise((resolve, reject) => {
       const chunks = [];
       let size = 0;
       req.on('data', (chunk) => {
         size += chunk.length;
-        if (size > MAX_BODY_BYTES) {
+        if (size > limit) {
           reject(new Error('body too large'));
           req.destroy();
           return;
         }
         chunks.push(chunk);
       });
-      req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+      // A Windows shell may prefix a byte order mark.
+      req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8').replace(/^﻿/, '')));
       req.on('error', reject);
     });
 
@@ -207,18 +210,34 @@ export function startServer({ port = 0, preferredPort = null, idleExitMs = 0, on
       return;
     }
 
-    if (req.method === 'POST' && (url.pathname === '/event' || url.pathname === '/hook')) {
-      let body;
+    // /hook/<agent>[/<event>] takes the AI's raw hook input and keeps only what the scene needs; the event is
+    // only for Antigravity, whose input does not name it. The URL has no '&' so the Windows hook command
+    // needs no quoting. It always answers 204 with no body: hook commands pipe the answer to the AI.
+    // Plain /hook with `agent` in the body is what plugins up to 1.2 send.
+    const [route, agentPart, eventPart] = url.pathname.split('/').filter(Boolean);
+    if (req.method === 'POST' && route === 'hook') {
       try {
-        body = JSON.parse(await readBody(req));
+        const body = JSON.parse(await readBody(req, MAX_HOOK_BYTES));
+        const ev = normalizeHook(body, agentPart ?? body?.agent, eventPart ?? null);
+        if (ev) applyEvent(ev);
+      } catch {
+        // Junk or an oversized body: ignored, the AI must never see an error from the office.
+      }
+      send(res, 204, '');
+      return;
+    }
+
+    // /event takes the generic event the demo sends.
+    if (req.method === 'POST' && url.pathname === '/event') {
+      let ev;
+      try {
+        ev = JSON.parse(await readBody(req));
       } catch {
         send(res, 400, '{"error":"invalid json"}');
         return;
       }
-      // /hook takes the raw Claude Code hook payload, /event the generic event used by the demo.
-      const ev = url.pathname === '/hook' ? normalizeHook(body) : body;
       if (typeof ev?.event !== 'string') {
-        send(res, url.pathname === '/hook' ? 202 : 400, url.pathname === '/hook' ? '{"ignored":true}' : '{"error":"missing event"}');
+        send(res, 400, '{"error":"missing event"}');
         return;
       }
       applyEvent(ev);

@@ -2,7 +2,7 @@
   "name": "claude-code-3d",
   "displayName": "IT-Office-3D",
   "description": "Watch Claude Code, Codex and Antigravity work in a cozy 2.5D office with live teammates, task status and activity. Local only, read only.",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "icon": "media/logo.png",
   "publisher": "gotanel1",
   "license": "MIT",
@@ -136,7 +136,7 @@
           {
             "id": "connect",
             "title": "Connect your AIs",
-            "description": "Claude Code, Codex and Antigravity report what they do through a small hook. Without it the office stays still.\n[Connect AIs](command:claudeCode3d.connect)",
+            "description": "Claude Code, Codex and Antigravity report what they do through a small hook (no Node.js needed). Without it the office stays still.\n[Connect AIs](command:claudeCode3d.connect)",
             "media": {
               "markdown": "media/walkthrough/plugin.md"
             },

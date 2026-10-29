@@ -19,9 +19,10 @@ const INSTALL = [`claude plugin marketplace add gotanel1/${PLUGIN}`, `claude plu
 const BUNDLE = fs.existsSync(path.join(__dirname, 'bundle')) ? path.join(__dirname, 'bundle') : path.join(__dirname, '..');
 const daemonFile = () => path.join(BUNDLE, 'packages', 'core', 'src', 'daemon.js');
 
-// Antigravity runs the hook from a path written in its own config, and VS Code replaces this extension's
-// folder on every update, so the hook runs from a copy in the data folder instead.
+// Outside Windows, Antigravity runs hook.sh from a path written in its own config, and VS Code replaces this
+// extension's folder on every update, so it runs from a copy in the data folder. Windows needs no file.
 const HOOK_HOME = path.join(os.homedir(), '.claude-code-3d', 'hook');
+const hookSh = () => path.join(HOOK_HOME, 'scripts', 'hook.sh');
 
 // The AIs this computer has (their settings folder exists) and whether each already reports to the office.
 function aiStatus(home = os.homedir()) {
@@ -34,27 +35,83 @@ function aiStatus(home = os.homedir()) {
   ];
 }
 
-// Terminal commands that connect one AI. Claude Code and Codex install the plugin from GitHub; Antigravity
-// gets the hook written into its hooks.json by connect.mjs, run from the stable copy.
-function connectCommands(id, hookHome = HOOK_HOME) {
+// Terminal commands that connect Claude Code or Codex: both install the office plugin from GitHub.
+function connectCommands(id) {
   if (id === 'claude') return INSTALL;
-  if (id === 'codex') return [`codex plugin marketplace add gotanel1/${PLUGIN}`, `codex plugin add ${PLUGIN}@${PLUGIN}`];
-  return [`node "${path.join(hookHome, 'scripts', 'connect.mjs')}" antigravity`];
+  return [`codex plugin marketplace add gotanel1/${PLUGIN}`, `codex plugin add ${PLUGIN}@${PLUGIN}`];
 }
 
-// Refreshes the copy Antigravity's hook runs from when this extension version has not written it yet.
-// The files are overwritten in place, never deleted first, so a hook running meanwhile still finds them.
-function copyHook(version) {
-  const stamp = path.join(HOOK_HOME, 'version');
-  try {
-    if (fs.readFileSync(stamp, 'utf8') === version) return;
-  } catch {
-    // No copy yet.
+// Writes the office hook into Antigravity's hooks.json from here, so no Node.js is needed. With `onlyIfStale`
+// it leaves a file that already has this version's hook alone (it runs at every start, to update old hooks).
+// The hook file is overwritten in place, never deleted first, so a hook running meanwhile still finds it.
+async function connectAntigravity(onlyIfStale = false) {
+  const { writeHook, antigravityCommand, ANTIGRAVITY_FILE } = await import(require('node:url').pathToFileURL(path.join(BUNDLE, 'scripts', 'connect.mjs')).href);
+  const command = (event) => antigravityCommand(event, process.platform, hookSh());
+  if (process.platform !== 'win32') {
+    if (/\s/.test(hookSh())) throw new Error(`Antigravity cannot run a hook from a path with a space (${hookSh()}).`);
+    fs.mkdirSync(path.dirname(hookSh()), { recursive: true });
+    fs.copyFileSync(path.join(BUNDLE, 'scripts', 'hook.sh'), hookSh());
   }
-  for (const part of ['scripts', path.join('packages', 'core')]) {
-    fs.cpSync(path.join(BUNDLE, part), path.join(HOOK_HOME, part), { recursive: true, force: true });
+  if (onlyIfStale && fs.readFileSync(ANTIGRAVITY_FILE, 'utf8').includes(JSON.stringify(command('Stop')))) return;
+  writeHook(ANTIGRAVITY_FILE, false, command);
+}
+
+// How many of the office's hooks Codex still skips because the user has not approved them, asked through
+// Codex's own app server (read only); null when Codex cannot be asked.
+function codexPendingHooks(cwd) {
+  return new Promise((resolve) => {
+    let child;
+    const done = (value) => {
+      clearTimeout(timer);
+      child?.stdin.end();
+      resolve(value);
+    };
+    const timer = setTimeout(() => { child?.kill(); done(null); }, 20000);
+    try {
+      child = spawn('codex', ['app-server'], { cwd, windowsHide: true });
+    } catch {
+      done(null);
+      return;
+    }
+    child.on('error', () => done(null));
+    let out = '';
+    child.stdout.on('data', (chunk) => {
+      out += chunk;
+      const line = out.split('\n').find((l) => l.includes('"id":2'));
+      if (!line) return;
+      try {
+        const hooks = JSON.parse(line).result.data.flatMap((g) => g.hooks);
+        done(hooks.filter((h) => h.pluginId === `${PLUGIN}@${PLUGIN}` && h.trustStatus !== 'trusted').length);
+      } catch {
+        done(null);
+      }
+    });
+    child.stdin.write([
+      { jsonrpc: '2.0', id: 1, method: 'initialize', params: { clientInfo: { name: PLUGIN, version: '1' } } },
+      { jsonrpc: '2.0', method: 'initialized' },
+      { jsonrpc: '2.0', id: 2, method: 'hooks/list', params: {} },
+    ].map((m) => JSON.stringify(m)).join('\n') + '\n');
+  });
+}
+
+// Codex runs none of the office's hooks until the user approves them in /hooks, and asks again after every
+// update of the plugin; without this warning the office would just stay still.
+const codexWarned = { count: 0 };
+async function checkCodexHooks() {
+  if (!aiStatus().find((a) => a.id === 'codex').connected) return;
+  const pending = await codexPendingHooks(workspaceRoots()[0] ?? os.homedir());
+  if (pending === null || pending === codexWarned.count) return;
+  codexWarned.count = pending;
+  if (!pending) return;
+  const choice = await vscode.window.showWarningMessage(
+    `Codex skips ${pending} IT-Office-3D hook${pending > 1 ? 's' : ''} until you approve them: in Codex, type /hooks and press t.`,
+    'Open Codex',
+  );
+  if (choice === 'Open Codex') {
+    const terminal = vscode.window.createTerminal('Codex');
+    terminal.show();
+    terminal.sendText('codex');
   }
-  fs.writeFileSync(stamp, version);
 }
 
 function readInfo() {
@@ -316,31 +373,44 @@ function watchStatus(item) {
 const names = (list) => list.map((a) => a.name).join(', ');
 
 // Asked once per window: an AI that is installed but not connected would leave the office still.
-async function offerConnect(context) {
+async function offerConnect() {
   const todo = aiStatus().filter((a) => a.present && !a.connected);
   if (!todo.length) return;
   const choice = await vscode.window.showWarningMessage(`IT-Office-3D can show what ${names(todo)} ${todo.length > 1 ? 'are' : 'is'} doing. Connect now?`, 'Connect', 'Not now');
-  if (choice === 'Connect') connectAIs(context);
+  if (choice === 'Connect') connectAIs();
 }
 
 // One click for every AI found: the office hook goes into each one's own settings, through a terminal so
 // the user sees each command run.
-function connectAIs(context) {
+async function connectAIs() {
   const all = aiStatus();
   const todo = all.filter((a) => a.present && !a.connected);
   if (!todo.length) {
     const found = all.filter((a) => a.present);
     vscode.window.showInformationMessage(found.length ? `${names(found)}: already connected.` : 'No Claude Code, Codex or Antigravity found on this computer.');
+    checkCodexHooks();
     return;
   }
-  if (todo.some((a) => a.id === 'antigravity')) copyHook(context.extension.packageJSON.version);
-  const terminal = vscode.window.createTerminal('IT-Office-3D');
-  terminal.show();
-  for (const a of todo) connectCommands(a.id).forEach((cmd) => terminal.sendText(cmd));
+  if (todo.some((a) => a.id === 'antigravity')) {
+    try {
+      await connectAntigravity();
+    } catch (err) {
+      vscode.window.showErrorMessage(`IT-Office-3D could not connect Antigravity: ${err.message}`);
+    }
+  }
+  const viaTerminal = todo.filter((a) => a.id !== 'antigravity');
+  if (viaTerminal.length) {
+    const terminal = vscode.window.createTerminal('IT-Office-3D');
+    terminal.show();
+    for (const a of viaTerminal) connectCommands(a.id).forEach((cmd) => terminal.sendText(cmd));
+  }
   const next = [];
+  if (viaTerminal.length) next.push('when the terminal finishes, run "Reload Window"');
   if (todo.some((a) => a.id === 'claude')) next.push('start a new Claude Code chat');
-  if (todo.some((a) => a.id === 'codex')) next.push('in Codex, type /hooks and approve the it-office-3d hooks');
-  vscode.window.showInformationMessage(`When the terminal finishes, run "Reload Window"${next.length ? `, then ${next.join(' and ')}` : ''}.`);
+  if (todo.some((a) => a.id === 'codex')) next.push('in Codex, type /hooks and press t to approve the it-office-3d hooks');
+  vscode.window.showInformationMessage(next.length ? `Almost there: ${next.join(', then ')}.` : 'Connected.');
+  // Codex installs in the terminal first; look for unapproved hooks once that has had time to finish.
+  if (todo.some((a) => a.id === 'codex')) setTimeout(checkCodexHooks, 90000);
 }
 
 // The plugin's installed version from Claude Code's plugin list, or null.
@@ -473,30 +543,33 @@ function activate(context) {
     vscode.commands.registerCommand('claudeCode3d.reset', reset),
     vscode.commands.registerCommand('claudeCode3d.chooseSession', () => chooseSession(context, scene)),
     vscode.commands.registerCommand('claudeCode3d.diagnostics', () => showDiagnostics(context)),
-    vscode.commands.registerCommand('claudeCode3d.connect', () => connectAIs(context)),
+    vscode.commands.registerCommand('claudeCode3d.connect', connectAIs),
     // A changed folder list changes which chats this window follows.
     vscode.workspace.onDidChangeWorkspaceFolders(() => scene.load()),
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('itOffice3d.language')) scene.load();
     }),
   );
-  // An update brings a new hook: keep Antigravity's copy in step with this version.
+  // The hooks only post to a running server and never start one, so the window keeps it up from the start.
+  ensureServer().catch(() => {});
+  // An update brings a new hook: rewrite Antigravity's when it is from an older version.
   if (aiStatus().find((a) => a.id === 'antigravity').connected) {
-    try {
-      copyHook(context.extension.packageJSON.version);
-    } catch {
-      // The old copy keeps working; the next start tries again.
-    }
+    connectAntigravity(true).catch(() => {
+      // The old hook keeps working; the next start tries again.
+    });
   }
   // First run: the walkthrough covers connecting too, so it replaces the warning once.
   if (!context.globalState.get('welcomed')) {
     context.globalState.update('welcomed', true);
     vscode.commands.executeCommand('workbench.action.openWalkthrough', `${context.extension.id}#getStarted`, false);
   } else {
-    offerConnect(context);
+    offerConnect();
   }
+  setTimeout(checkCodexHooks, 10000);
+  const codexTimer = setInterval(checkCodexHooks, 10 * 60 * 1000);
+  context.subscriptions.push({ dispose: () => clearInterval(codexTimer) });
 }
 
 function deactivate() {}
 
-module.exports = { activate, deactivate, describe, notification, pluginInstalled, pluginVersion, aiStatus, connectCommands, sceneQuery, sceneLanguage, formatDiagnostics, insideRoots };
+module.exports = { activate, deactivate, describe, notification, pluginInstalled, pluginVersion, aiStatus, connectCommands, codexPendingHooks, sceneQuery, sceneLanguage, formatDiagnostics, insideRoots };

@@ -1,7 +1,7 @@
 // Maps the tools of Claude Code, Codex and Antigravity to the desks of an IT department. Claude Code has no real roles: these rules read
 // the tool name, the file it touches and the shell command, and pick the job that would normally do it.
 // The PM (team lead) is not a desk: they walk around and hand out the work.
-// The AIs whose hooks the office understands (scripts/hook.mjs --agent).
+// The AIs whose hooks the office understands (the hook URL /hook/<agent>).
 export const AGENTS = ['claude', 'codex', 'antigravity'];
 export const ROLES = ['BA', 'SA', 'Architect', 'UX', 'Dev', 'DBA', 'QA', 'DevOps', 'Security', 'Writer'];
 

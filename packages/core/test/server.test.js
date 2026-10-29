@@ -38,7 +38,9 @@ test('hook payloads drive the state over HTTP', async () => {
   const { port, close } = await startServer();
   try {
     assert.equal((await request(port, { route: '/health' })).status, 200);
-    assert.equal((await json(port, '/hook', { hook_event_name: 'UserPromptSubmit', session_id: 's1', cwd: '/work/app', prompt: 'private' })).status, 202);
+    // The hook answers 204 with no body, because hooks pipe the answer to stdout.
+    const first = await json(port, '/hook', { hook_event_name: 'UserPromptSubmit', session_id: 's1', cwd: '/work/app', prompt: 'private' });
+    assert.deepEqual([first.status, first.text], [204, '']);
     await json(port, '/hook', { hook_event_name: 'PreToolUse', session_id: 's1', tool_name: 'Read', tool_input: { file_path: '/work/app/src/a.js' } });
     let state = await getState(port);
     assert.equal(state.active, 's1');
@@ -46,8 +48,8 @@ test('hook payloads drive the state over HTTP', async () => {
     assert.ok(!JSON.stringify(state).includes('private'));
 
     // Unknown hooks and junk are ignored without error.
-    assert.equal((await json(port, '/hook', { hook_event_name: 'Notification', session_id: 's1' })).status, 202);
-    assert.equal((await request(port, { method: 'POST', route: '/hook', body: '{oops' })).status, 400);
+    assert.equal((await json(port, '/hook', { hook_event_name: 'Notification', session_id: 's1' })).status, 204);
+    assert.equal((await request(port, { method: 'POST', route: '/hook', body: '{oops' })).status, 204);
 
     await json(port, '/hook', { hook_event_name: 'Stop', session_id: 's1' });
     state = await getState(port);
@@ -166,5 +168,23 @@ test('the preferred port falls back to a free one when taken', async () => {
     }
   } finally {
     await first.close();
+  }
+});
+
+test('raw Codex and Antigravity hook input is trimmed by the server', async () => {
+  const { port, close } = await startServer();
+  try {
+    const post = (route, body) => request(port, { method: 'POST', route, body });
+    // Codex: a patch (file contents) keeps only its file; a big tool output is accepted and dropped.
+    await post('/hook/codex', JSON.stringify({ hook_event_name: 'PreToolUse', session_id: 'x', tool_name: 'apply_patch', tool_input: { command: '*** Begin Patch\n*** Update File: src/a.js\n+SECRET\n*** End Patch' } }));
+    await post('/hook/codex', JSON.stringify({ hook_event_name: 'PostToolUse', session_id: 'x', tool_name: 'Bash', tool_input: { command: ['git', 'status'] }, tool_response: 'SECRET'.repeat(100000) }));
+    // Antigravity names the event in the URL; a Windows pipe may add a byte-order mark.
+    await post('/hook/antigravity/PreToolUse', '﻿' + JSON.stringify({ conversationId: 'g', workspacePaths: ['/w'], toolCall: { name: 'run_command', args: { CommandLine: 'npm test' } } }));
+    const state = await getState(port);
+    assert.deepEqual([state.sessions.x.agent, state.sessions.x.roles.Dev.detail], ['codex', 'src/a.js']);
+    assert.deepEqual([state.sessions.g.agent, state.sessions.g.roles.QA.detail], ['antigravity', 'npm test']);
+    assert.ok(!JSON.stringify(state).includes('SECRET'));
+  } finally {
+    await close();
   }
 });

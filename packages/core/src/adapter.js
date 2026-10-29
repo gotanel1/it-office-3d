@@ -41,7 +41,11 @@ export function describeTool(tool, input = {}) {
   return null;
 }
 
-export function normalizeHook(raw) {
+// `raw` is the hook's stdin exactly as the AI sent it: the hooks only forward it, so everything that is
+// not needed (prompts, file contents, tool output) is dropped here. `agent` and `event` come from the hook
+// URL; Antigravity's stdin does not name its event.
+export function normalizeHook(raw, agent = raw?.agent, antigravityEvent = null) {
+  if (agent === 'antigravity') raw = fromAntigravity(antigravityEvent, raw);
   if (!raw || typeof raw !== 'object') return null;
   const event = EVENT_NAMES[raw.hook_event_name ?? raw.event];
   if (!event) return null;
@@ -50,13 +54,16 @@ export function normalizeHook(raw) {
     event,
     session_id: typeof raw.session_id === 'string' ? raw.session_id : 'default',
   };
-  if (AGENTS.includes(raw.agent)) ev.agent = raw.agent;
+  if (AGENTS.includes(agent)) ev.agent = agent;
   if (typeof raw.transcript_path === 'string') ev.transcript_path = raw.transcript_path;
   if (typeof raw.cwd === 'string') ev.cwd = raw.cwd;
 
   if (event === 'PreToolUse' || event === 'PostToolUse' || event === 'PermissionRequest') {
     ev.tool = typeof raw.tool_name === 'string' ? raw.tool_name : undefined;
-    const input = raw.tool_input && typeof raw.tool_input === 'object' ? raw.tool_input : {};
+    let input = raw.tool_input && typeof raw.tool_input === 'object' ? raw.tool_input : {};
+    // Codex may send a command as an argv array, and a patch (file contents) where only its file matters.
+    if (Array.isArray(input.command)) input = { ...input, command: input.command.join(' ') };
+    if (ev.tool === 'apply_patch') input = { file_path: patchFile(input.command) ?? undefined };
     Object.assign(ev, describeTool(ev.tool, input));
     // The full path, so a desk's file list can open it in the editor.
     const file = input.file_path ?? input.notebook_path;

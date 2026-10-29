@@ -35,7 +35,7 @@ Version **1.0.0** adds GPT-generated local artwork, a fixed-camera room, a selec
 
 ## 1. The 60-second version
 
-You need Claude Code, Node.js 18 or newer, and git. Then, in a terminal:
+You need Claude Code, git, and Node.js 18 or newer for the browser view. (The hooks need no Node.js, and the VS Code extension runs the server with VS Code's own.) Then, in a terminal:
 
 ```
 claude plugin marketplace add gotanel1/it-office-3d
@@ -75,7 +75,7 @@ You need all of these. Each line shows how to check.
 | Need | How to check | If it is missing |
 |---|---|---|
 | **Claude Code**, signed in and working | `claude --version` prints a version (tested with 2.1.269) | Install it from the official Claude Code documentation |
-| **Node.js 18 or newer** | `node --version` prints `v18` or higher | Install the LTS version from https://nodejs.org |
+| **Node.js 18 or newer** (browser view only) | `node --version` prints `v18` or higher | Install the LTS version from https://nodejs.org. Not needed with the VS Code extension |
 | **git** | `git --version` prints a version | Install from https://git-scm.com. Claude Code uses it to download plugins |
 | A modern **web browser** | Chrome, Edge, Firefox or Safari. The 1.0.0 browser checks use Chrome | Update your browser. The default 2.5D scene does not need WebGL |
 
@@ -158,7 +158,7 @@ On Windows you can also double-click `start-demo.bat`. It opens `http://127.0.0.
 
 The office shows all three AIs at once: Claude, GPT and Antigravity each have a lead who briefs their own AI's work, and the team list names the AI at each desk. From a clone of this repository:
 
-**Codex** installs the office as a Codex plugin. Then open `codex` and type `/hooks`: an event whose **Active/Installed** count is uneven (for example `1/2`) has a hook waiting; press **Enter** on it and approve the it-office-3d hook. Codex asks again after each update of the office:
+**Codex** installs the office as a Codex plugin. Then open `codex` and type `/hooks`: it says how many hooks need review; press **t** to trust them all (or **Enter** on an event to review one). Codex asks again after each update of the office, and the VS Code extension reminds you when it does:
 
 ```
 codex plugin marketplace add <path to this repository>
@@ -277,7 +277,7 @@ Each text is cut to 300 characters before it leaves the hook, and the server kee
 - **the output of tools**
 - Claude's answers
 
-You can check this yourself: the hook is one short file, [`scripts/hook.mjs`](scripts/hook.mjs). On the server side, automated tests fail if a prompt or a file's content shows up in the stored state.
+You can check this yourself: the hook is one short file, [`scripts/hook.sh`](scripts/hook.sh) (on Windows, Codex and Antigravity run the same `curl` call directly). It hands the hook input to the server on `127.0.0.1`, and the server keeps only the fields above ([`packages/core/src/adapter.js`](packages/core/src/adapter.js)); automated tests fail if a prompt or a file's content shows up in the stored state.
 
 ### What you should still know
 
@@ -285,7 +285,7 @@ You can check this yourself: the hook is one short file, [`scripts/hook.mjs`](sc
 - The server only listens on `127.0.0.1`, so other devices on your network cannot reach it. Other **user accounts on the same computer** can. On a shared computer, treat the scene as visible to them.
 - Web pages in your browser cannot read from it or send to it: the server rejects requests from other sites and other host names.
 - To count tokens, the server reads Claude's own log file for the conversation, and only if the file is inside your Claude folder. It parses each line but keeps only the usage numbers.
-- It adds one small background program (Node.js) that stops by itself after an hour with no activity and no open page.
+- It adds one small background program (the local server, started by VS Code or by `/office`) that stops by itself after an hour with no activity and no open page.
 - Installing a plugin means running someone else's code on your machine. The code is short and open for you to read. This is the same trust decision as any plugin.
 
 ### What is stored on your disk
@@ -345,7 +345,7 @@ After uninstalling, hooks stop firing at the start of the next conversation.
 ## 10. FAQ
 
 **Will it slow Claude Code down?**
-No. The hooks run in the background and always finish with success, so they cannot block or break a conversation. Each hook starts a short Node.js process, which costs a little CPU on your computer. The plugin adds about 30 tokens to the context of each conversation (Claude Code's `claude plugin details` reports this figure).
+No. The hooks run in the background and always finish with success, so they cannot block or break a conversation. Each hook starts a short `curl` call, which costs a few milliseconds on your computer. The plugin adds about 30 tokens to the context of each conversation (Claude Code's `claude plugin details` reports this figure).
 
 **Does it cost money or use my Claude usage?**
 It makes no API calls. The only effect on usage is the roughly 30 tokens mentioned above.
@@ -439,8 +439,8 @@ The first should return JSON containing `"name":"claude-code-3d"`. The second li
 
 | File | What it does |
 |---|---|
-| `hooks/hooks.json` | Registers the hooks. All run asynchronously through `node` |
-| `scripts/hook.mjs` | The hook program. Trims the event and posts it to `127.0.0.1`. Always exits 0 |
+| `hooks/hooks.json` | Registers the Claude Code hooks. All run asynchronously through `sh` |
+| `scripts/hook.sh` | The hook program (sh and curl only). Posts the hook input to `127.0.0.1`, which trims it. Always exits 0 |
 | `scripts/lib.mjs`, `scripts/open.mjs` | Finds or starts the local server; opens the page |
 | `packages/core/src/server.js` | The local web server, with host and origin checks |
 | `packages/core/src/adapter.js` | Turns hook data into events, dropping everything else |
@@ -454,9 +454,9 @@ The first should return JSON containing `"name":"claude-code-3d"`. The second li
 ```
  Claude Code                                    your computer only
 ┌────────────┐  hook event   ┌────────────┐  POST /hook   ┌───────────────────┐  live stream  ┌───────────┐
-│ a tool     │ ────────────► │ hook.mjs   │ ────────────► │ local server      │ ────────────► │ browser   │
-│ starts or  │  (async, JSON │ trims the  │  127.0.0.1    │ (Node.js)         │ (SSE)         │ 3D scene  │
-│ ends, turn │   on stdin)   │ event      │               │ keeps the state   │               │ (2.5D UI)│
+│ a tool     │ ────────────► │ hook.sh    │ ────────────► │ local server      │ ────────────► │ browser   │
+│ starts or  │  (async, JSON │ posts it   │  127.0.0.1    │ (Node.js)         │ (SSE)         │ 3D scene  │
+│ ends, turn │   on stdin)   │ as is      │               │ keeps the state   │               │ (2.5D UI)│
 │ ends       │               └────────────┘               │ reads token usage │               └───────────┘
 └────────────┘                                            └───────────────────┘
         │  transcript file (usage numbers only)  ▲

@@ -22,7 +22,7 @@ The extension only draws the office. Each AI reports its work through a small ho
 1. Run **IT-Office-3D: Connect AIs** from the Command Palette (VS Code also offers it on first start). It finds Claude Code, Codex and Antigravity on this computer and, in a terminal you can watch, connects only the ones that are not connected yet.
 2. Run **Reload Window**.
 3. **Claude Code:** start a new chat (hooks load when a chat starts).
-4. **Codex:** open `codex` and type `/hooks`. The list shows each event with **Active/Installed** counts; an event where the first number is lower (for example `1/2`) has a hook waiting for you. Press **Enter** on it, select the **it-office-3d** hook and approve it. Repeat for each such event. Codex asks again after each update of the office, because it ties approval to the plugin's exact files.
+4. **Codex:** open `codex`, type `/hooks` and press **t** to trust the hooks waiting for review (or **Enter** on an event to review one by one). Codex asks again after each update of the office, because it ties approval to the plugin's exact files; the extension shows a reminder with an **Open Codex** button whenever hooks are waiting.
 5. **Antigravity:** nothing more to do.
 
 What **Connect AIs** runs, if you prefer to do it by hand:
@@ -31,9 +31,9 @@ What **Connect AIs** runs, if you prefer to do it by hand:
 |---|---|
 | Claude Code | `claude plugin marketplace add gotanel1/it-office-3d` then `claude plugin install it-office-3d@it-office-3d` |
 | Codex | `codex plugin marketplace add gotanel1/it-office-3d` then `codex plugin add it-office-3d@it-office-3d` |
-| Antigravity | adds the hook to `~/.gemini/config/hooks.json` (your other hooks are kept, the old file is saved as `hooks.json.bak`); the hook runs from a copy in `~/.claude-code-3d/hook` |
+| Antigravity | the extension adds the hook to `~/.gemini/config/hooks.json` itself (your other hooks are kept, the old file is saved as `hooks.json.bak`) |
 
-All three need [Node.js](https://nodejs.org) to run the hook. Antigravity cannot be connected when your user folder path contains a space, and it has no approval event, so its lead never shows **Waiting for your OK**.
+No Node.js needed: the hooks only use `curl` (built into Windows 10 and later, macOS and Linux), and VS Code runs the office server. On macOS and Linux, Antigravity cannot be connected when your user folder path contains a space. Antigravity has no approval event, so its lead never shows **Waiting for your OK**.
 
 Local VS Code only: remote windows (SSH, WSL, containers) are not supported yet.
 
@@ -60,7 +60,7 @@ For editors without the VS Code Marketplace (Cursor, Antigravity), download the 
 cd vscode
 npm test
 npm run package
-code --install-extension claude-code-3d-1.2.1.vsix
+code --install-extension claude-code-3d-1.3.0.vsix
 ```
 
 ## Release a new version

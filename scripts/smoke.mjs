@@ -50,7 +50,7 @@ for (const event of [
   { hook_event_name: 'SessionStart', session_id: 'smoke', cwd },
   { hook_event_name: 'PreToolUse', session_id: 'smoke', cwd, tool_name: 'Bash', tool_input: { command: 'npm test', description: 'Run the tests' } },
 ]) {
-  const hooked = run('hook.mjs', JSON.stringify(event));
+  const hooked = spawnSync('sh', [path.join(root, 'scripts', 'hook.sh'), 'claude'], { env, input: JSON.stringify(event), encoding: 'utf8', timeout: 20000 });
   assert.equal(hooked.status, 0, hooked.stderr);
   assert.equal(hooked.stdout, '', 'the hook must never print');
 }

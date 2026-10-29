@@ -6,7 +6,7 @@ import path from 'node:path';
 import { roleForTool, roleForAgentType } from '../src/rules.js';
 import { normalizeHook, describeTool, fromAntigravity, patchFile } from '../src/adapter.js';
 import { createState, reduce, expireStale, STALE_WORKING_MS, activeFor, crewFor } from '../src/state.js';
-import { withHook } from '../../../scripts/connect.mjs';
+import { withHook, antigravityCommand } from '../../../scripts/connect.mjs';
 import { TranscriptTail, usageFromRecord, subtractUsage, isAllowedTranscriptPath } from '../src/transcript.js';
 
 test('tools map to the IT department desks', () => {
@@ -343,7 +343,8 @@ test('Codex hooks use the Claude shape, and apply_patch keeps only the file it e
 
 test('Antigravity hooks are reshaped and their tools find a desk', () => {
   const common = { conversationId: 'g1', workspacePaths: ['/work/app'], transcriptPath: '/t.jsonl', modelName: 'gemini' };
-  const pre = normalizeHook({ agent: 'antigravity', ...fromAntigravity('PreToolUse', { ...common, stepIdx: 3, toolCall: { name: 'run_command', args: { CommandLine: 'npm test', Cwd: '/work/app/web' } } }) });
+  // The server gets Antigravity's raw input with the AI and event from the hook URL.
+  const pre = normalizeHook({ ...common, stepIdx: 3, toolCall: { name: 'run_command', args: { CommandLine: 'npm test', Cwd: '/work/app/web' } } }, 'antigravity', 'PreToolUse');
   assert.deepEqual(pre, { event: 'PreToolUse', session_id: 'g1', agent: 'antigravity', cwd: '/work/app/web', tool: 'run_command', command: 'npm test' });
   assert.equal(roleForTool(pre.tool, pre.command), 'QA');
 
@@ -400,11 +401,16 @@ test('each AI gets its newest session in the shared office, or only the picked o
 
 test('connecting Antigravity keeps its other hooks and can be undone', () => {
   const other = { hooks: [{ type: 'command', command: 'lint.sh' }] };
-  const ag = withHook({ 'my-linter': { PostToolUse: [other] } }, 'antigravity');
-  assert.match(ag['it-office-3d'].PreInvocation[0].command, /--agent antigravity --event PreInvocation$/);
-  assert.match(ag['it-office-3d'].PreToolUse[0].hooks[0].command, /--agent antigravity --event PreToolUse$/);
+  const win = (event) => antigravityCommand(event, 'win32');
+  const ag = withHook({ 'my-linter': { PostToolUse: [other] } }, false, win);
+  assert.equal(ag['it-office-3d'].PreInvocation[0].command, 'cmd /d /c curl.exe -s -m 2 -o NUL --data-binary @- http://127.0.0.1:3737/hook/antigravity/PreInvocation & exit 0');
+  assert.match(ag['it-office-3d'].PreToolUse[0].hooks[0].command, /hook\/antigravity\/PreToolUse & exit 0$/);
+  assert.equal(antigravityCommand('Stop', 'darwin', '/home/me/.claude-code-3d/hook/scripts/hook.sh'), 'sh /home/me/.claude-code-3d/hook/scripts/hook.sh antigravity Stop');
   assert.deepEqual(ag['my-linter'], { PostToolUse: [other] });
   // Connecting twice does not add the hook twice; removing leaves only the user's own hooks.
-  assert.deepEqual(withHook(ag, 'antigravity'), ag);
-  assert.deepEqual(withHook(ag, 'antigravity', true), { 'my-linter': { PostToolUse: [other] } });
+  assert.deepEqual(withHook(ag, false, win), ag);
+  assert.deepEqual(withHook(ag, true), { 'my-linter': { PostToolUse: [other] } });
+  // A hook written by 1.2 (node hook.mjs) is replaced, not kept next to the new one.
+  const old = { 'it-office-3d': { Stop: [{ type: 'command', command: 'node C:/x/scripts/hook.mjs --agent antigravity --event Stop' }] } };
+  assert.equal(withHook(old, false, win)['it-office-3d'].Stop.length, 1);
 });

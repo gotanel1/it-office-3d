@@ -36,7 +36,7 @@
 <a id="s1"></a>
 ## 1. สรุปใน 60 วินาที
 
-ต้องมี Claude Code, Node.js 18 ขึ้นไป และ git จากนั้นพิมพ์ในเทอร์มินัล:
+ต้องมี Claude Code, git และ Node.js 18 ขึ้นไปสำหรับดูในเบราว์เซอร์ (hook ไม่ต้องใช้ Node.js และส่วนขยาย VS Code ใช้ Node ที่มากับ VS Code รัน server) จากนั้นพิมพ์ในเทอร์มินัล:
 
 ```
 claude plugin marketplace add gotanel1/it-office-3d
@@ -78,7 +78,7 @@ http://127.0.0.1:3737/
 | ต้องมี | วิธีเช็ก | ถ้ายังไม่มี |
 |---|---|---|
 | **Claude Code** ล็อกอินและใช้งานได้ | `claude --version` แสดงเลขเวอร์ชัน (ทดสอบกับ 2.1.269) | ติดตั้งตามเอกสารทางการของ Claude Code |
-| **Node.js 18 ขึ้นไป** | `node --version` ขึ้น `v18` หรือสูงกว่า | ติดตั้งรุ่น LTS จาก https://nodejs.org |
+| **Node.js 18 ขึ้นไป** (เฉพาะดูในเบราว์เซอร์) | `node --version` ขึ้น `v18` หรือสูงกว่า | ติดตั้งรุ่น LTS จาก https://nodejs.org ถ้าใช้ส่วนขยาย VS Code ไม่ต้องติดตั้ง |
 | **git** | `git --version` แสดงเลขเวอร์ชัน | ติดตั้งจาก https://git-scm.com (Claude Code ใช้ git ดาวน์โหลด plugin) |
 | **เบราว์เซอร์**รุ่นใหม่ | Chrome, Edge, Firefox หรือ Safari (การทดสอบเวอร์ชัน 1.0.0 ใช้ Chrome) | อัปเดตเบราว์เซอร์ ฉาก 2.5D ไม่ต้องใช้ WebGL |
 
@@ -162,7 +162,7 @@ npm run demo
 
 ออฟฟิศแสดง AI ทั้ง 3 ตัวพร้อมกัน: Claude, GPT และ Antigravity มีหัวหน้าของตัวเองที่เดินสั่งงานของ AI ตัวนั้น และรายชื่อทีมบอกว่า AI ตัวไหนใช้โต๊ะไหนอยู่ จากโฟลเดอร์ที่ clone รีโปนี้ไว้:
 
-**Codex** ติดตั้งออฟฟิศเป็น plugin ของ Codex แล้วเปิด `codex` พิมพ์ `/hooks` event ไหนที่ตัวเลข **Active/Installed** ไม่เท่ากัน (เช่น `1/2`) แปลว่ามี hook รออนุมัติ กด **Enter** ที่ event นั้นแล้วอนุญาต hook ของ it-office-3d ทุกครั้งที่ office อัปเดต Codex จะให้อนุญาตใหม่:
+**Codex** ติดตั้งออฟฟิศเป็น plugin ของ Codex แล้วเปิด `codex` พิมพ์ `/hooks` จะเห็นว่ามี hook รอตรวจกี่ตัว กด **t** เพื่ออนุญาตทั้งหมด (หรือกด **Enter** ที่ event เพื่อดูทีละตัว) ทุกครั้งที่ office อัปเดต Codex จะให้อนุญาตใหม่ และส่วนขยาย VS Code จะเตือนให้:
 
 ```
 codex plugin marketplace add <ที่อยู่ของรีโปนี้>
@@ -284,7 +284,7 @@ Claude Code ──(hook บนเครื่องคุณ)──► เว็
 - **ผลลัพธ์ของ tool**
 - คำตอบของ Claude
 
-ตรวจสอบเองได้: hook เป็นไฟล์สั้นๆ ไฟล์เดียว [`scripts/hook.mjs`](scripts/hook.mjs) ฝั่ง server มีเทสต์อัตโนมัติที่จะล้มถ้าพรอมต์หรือเนื้อหาไฟล์หลุดเข้าไปในสถานะที่เก็บ
+ตรวจสอบเองได้: hook เป็นไฟล์สั้นๆ ไฟล์เดียว [`scripts/hook.sh`](scripts/hook.sh) ซึ่งส่งข้อมูลให้ server ในเครื่องเป็นคนตัดทิ้งเหลือแค่ที่ฉากต้องใช้ ฝั่ง server มีเทสต์อัตโนมัติที่จะล้มถ้าพรอมต์หรือเนื้อหาไฟล์หลุดเข้าไปในสถานะที่เก็บ
 
 ### สิ่งที่ควรรู้
 
@@ -450,8 +450,8 @@ curl -s http://127.0.0.1:3737/debug/events
 
 | ไฟล์ | ทำอะไร |
 |---|---|
-| `hooks/hooks.json` | ลงทะเบียน hooks ทั้งหมดรันแบบ async ผ่าน `node` |
-| `scripts/hook.mjs` | โปรแกรม hook ตัดทอนเหตุการณ์แล้วส่งไป `127.0.0.1` จบด้วย exit 0 เสมอ |
+| `hooks/hooks.json` | ลงทะเบียน hooks ของ Claude Code ทั้งหมดรันแบบ async ผ่าน `sh` |
+| `scripts/hook.sh` | โปรแกรม hook (ใช้แค่ sh กับ curl) ส่งข้อมูลไป `127.0.0.1` ซึ่งเป็นคนตัดทอน จบด้วย exit 0 เสมอ |
 | `scripts/lib.mjs`, `scripts/open.mjs` | หาหรือเริ่ม server ในเครื่อง และเปิดหน้าเว็บ |
 | `packages/core/src/server.js` | เว็บเซิร์ฟเวอร์ในเครื่อง พร้อมการตรวจ host และ origin |
 | `packages/core/src/adapter.js` | แปลงข้อมูล hook เป็นเหตุการณ์ ทิ้งส่วนอื่นทั้งหมด |
@@ -466,9 +466,9 @@ curl -s http://127.0.0.1:3737/debug/events
 ```
  Claude Code                                    your computer only
 ┌────────────┐  hook event   ┌────────────┐  POST /hook   ┌───────────────────┐  live stream  ┌───────────┐
-│ a tool     │ ────────────► │ hook.mjs   │ ────────────► │ local server      │ ────────────► │ browser   │
-│ starts or  │  (async, JSON │ trims the  │  127.0.0.1    │ (Node.js)         │ (SSE)         │ 3D scene  │
-│ ends, turn │   on stdin)   │ event      │               │ keeps the state   │               │ (2.5D UI)│
+│ a tool     │ ────────────► │ hook.sh    │ ────────────► │ local server      │ ────────────► │ browser   │
+│ starts or  │  (async, JSON │ posts it   │  127.0.0.1    │ (Node.js)         │ (SSE)         │ 3D scene  │
+│ ends, turn │   on stdin)   │ as is      │               │ keeps the state   │               │ (2.5D UI)│
 │ ends       │               └────────────┘               │ reads token usage │               └───────────┘
 └────────────┘                                            └───────────────────┘
         │  transcript file (usage numbers only)  ▲
