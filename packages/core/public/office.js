@@ -71,8 +71,53 @@ backdrop.addEventListener('error', () => { assetError.hidden = false; });
 room.append(backdrop);
 scene.replaceChildren(room, assetError);
 const sceneCaption = node('div', 'scene-caption');
-sceneCaption.append(node('span', '', tr('THE WORKSPACE', 'พื้นที่ทำงาน')), node('span', '', tr('FIXED VIEW · LOCAL ONLY', 'มุมคงที่ · ทำงานในเครื่อง')));
+sceneCaption.append(node('span', '', tr('THE WORKSPACE', 'พื้นที่ทำงาน')), node('span', '', tr('SCROLL TO ZOOM · DRAG TO MOVE · DOUBLE-CLICK TO RESET', 'เลื่อนลูกกลิ้งเพื่อซูม · ลากเพื่อเลื่อน · ดับเบิลคลิกเพื่อรีเซ็ต')));
 scene.append(sceneCaption);
+
+// Zoom and pan the room with a CSS transform; workers are inside it, so they follow.
+const view = { scale: 1, x: 0, y: 0 };
+function applyView() {
+  // Keep the room covering its box, so it can never be dragged out of sight.
+  view.x = Math.min(0, Math.max(room.offsetWidth * (1 - view.scale), view.x));
+  view.y = Math.min(0, Math.max(room.offsetHeight * (1 - view.scale), view.y));
+  room.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+}
+scene.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = room.getBoundingClientRect();
+  const next = Math.min(3, Math.max(1, view.scale * Math.exp(-e.deltaY * 0.0015)));
+  // Zoom toward the cursor: the point under it stays put.
+  view.x += (e.clientX - rect.left) * (1 - next / view.scale);
+  view.y += (e.clientY - rect.top) * (1 - next / view.scale);
+  view.scale = next;
+  applyView();
+}, { passive: false });
+let drag = null;
+scene.addEventListener('pointerdown', (e) => {
+  if (e.button === 0) drag = { x: e.clientX, y: e.clientY, moved: false };
+});
+window.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x;
+  const dy = e.clientY - drag.y;
+  if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+  drag.moved = true;
+  scene.classList.add('dragging');
+  view.x += dx;
+  view.y += dy;
+  drag.x = e.clientX;
+  drag.y = e.clientY;
+  applyView();
+});
+window.addEventListener('pointerup', () => {
+  if (drag?.moved) setTimeout(() => { drag = null; });
+  else drag = null;
+  scene.classList.remove('dragging');
+});
+// A drag that ends on a worker must not also select it.
+scene.addEventListener('click', (e) => { if (drag?.moved) e.stopPropagation(); }, true);
+scene.addEventListener('dblclick', () => { Object.assign(view, { scale: 1, x: 0, y: 0 }); applyView(); });
+window.addEventListener('resize', applyView);
 document.getElementById('tags').hidden = true;
 
 const workers = ROLES.map((role) => {

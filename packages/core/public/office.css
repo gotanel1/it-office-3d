@@ -41,9 +41,11 @@ body.office-mode #pipeline, body.office-mode #hud { display: flex; }
 .teammate[data-state='failed'] .role-status { color: #b63e2f; font-weight: 700; }
 .roster-hint { margin: auto 0 0; padding: 10px; color: #70796d; font-size: 9px; line-height: 1.5; border-top: 1px solid #c6cbba; }
 .office-mode #scene { inset: 84px 18px 108px 202px; display: flex; align-items: center; justify-content: center; }
-.office-room { position: relative; width: min(100%, calc((100vh - 216px) * 1.5)); aspect-ratio: 3 / 2; flex-shrink: 0; container-type: inline-size; }
+.office-room { position: relative; width: min(100%, calc((100vh - 216px) * 1.5)); aspect-ratio: 3 / 2; flex-shrink: 0; container-type: inline-size; transform-origin: 0 0; }
+.office-mode #scene { overflow: hidden; touch-action: none; cursor: grab; }
+.office-mode #scene.dragging { cursor: grabbing; }
 .room-art { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none; }
-.scene-caption { position: absolute; left: 12px; right: 12px; top: -10px; display: flex; justify-content: space-between; color: #9aacae; font-size: 9px; letter-spacing: 1.8px; pointer-events: none; }
+.scene-caption { position: absolute; left: 12px; right: 12px; top: 2px; display: flex; justify-content: space-between; color: #9aacae; font-size: 9px; letter-spacing: 1.8px; pointer-events: none; }
 .office-mode .worker { position: absolute; transform: translate(-50%, -100%); width: 8.3%; padding: 0; border: 0; border-radius: 0; background: transparent; z-index: 4; }
 .worker .sprite { filter: drop-shadow(0 3px 1px #15272345); transform-origin: 50% 90%; }
 .worker-label { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); display: block; white-space: nowrap; padding: 2px 5px; background: #fffef0; border: 1px solid #8d9a85; border-radius: 2px; color: #314238; font-size: clamp(7px, 1.05cqw, 11px); font-weight: 600; line-height: 1.2; box-shadow: 1px 2px 0 #18352935; }

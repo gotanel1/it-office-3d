@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1
+- **Zoom and move the office:** scroll to zoom (up to 3×, toward the cursor), drag to move, double-click to reset. A drag that ends on a teammate does not open their activity.
+- **Upgrade:** scene compatibility is now 4, so an older background server is replaced and serves the new scene.
+
 ## 1.0.0
 - **A new cozy office:** fixed-camera 2.5D artwork, a warm wood interior, city windows, plants and a lounge, with GPT-generated local assets.
 - **Eleven chibi characters:** the original ten IT roles plus a PM who walks between desks and briefs teammates using the existing work transitions.
