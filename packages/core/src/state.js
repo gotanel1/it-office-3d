@@ -1,10 +1,10 @@
-import { ROLES, roleForTool, roleForAgentType } from './rules.js';
+import { AGENTS, ROLES, roleForTool, roleForAgentType } from './rules.js';
 
 // The reducer turns generic events into a state snapshot.
 // Hook payloads are mapped to this shape by adapter.js.
 //
-// event: SessionStart | UserPromptSubmit | PreToolUse | PostToolUse | PermissionRequest | Notification | SubagentStop | Stop
-// fields: session_id, cwd, tool, command, path, file, note, failed, notification_type, subagent_type, agent_type, role
+// event: SessionStart | UserPromptSubmit | ModelCall | PreToolUse | PostToolUse | PermissionRequest | Notification | SubagentStop | Stop
+// fields: session_id, agent, cwd, tool, command, path, file, note, failed, notification_type, subagent_type, agent_type, role
 
 // `failed`: the last call of this desk in the current task failed (cleared when the desk starts again).
 const idleRole = () => ({ state: 'waiting', tool: null, detail: null, note: null, done: false, failed: false, running: 0 });
@@ -12,7 +12,7 @@ const idleRole = () => ({ state: 'waiting', tool: null, detail: null, note: null
 // `waiting`: Claude asked the user for permission and has not had an answer yet.
 function newSession() {
   const roles = Object.fromEntries(ROLES.map((role) => [role, idleRole()]));
-  return { roles, startedAt: null, endedAt: null, tokens: null, cwd: null, waiting: null, updatedAt: 0 };
+  return { roles, agent: 'claude', startedAt: null, endedAt: null, tokens: null, cwd: null, waiting: null, updatedAt: 0 };
 }
 
 // `logs` holds what each desk did in the current task (sessionId -> role -> entries). It is served on
@@ -73,13 +73,29 @@ export function pruneSessions(state, keep = 12) {
 export function activeFor(state, sessionId, roots = []) {
   if (sessionId && state.sessions[sessionId]) return sessionId;
   if (roots.length === 0) return state.active;
+  return newest(state, roots);
+}
+
+// The session each AI shows in the shared office: only the picked one, else each AI's newest session
+// (inside the viewer's folders when it passes any).
+export function crewFor(state, sessionId, roots = []) {
+  if (sessionId && state.sessions[sessionId]) return { [state.sessions[sessionId].agent ?? 'claude']: sessionId };
+  const crew = {};
+  for (const agent of AGENTS) {
+    const id = newest(state, roots, (s) => (s.agent ?? 'claude') === agent);
+    if (id) crew[agent] = id;
+  }
+  return crew;
+}
+
+function newest(state, roots, keep = () => true) {
   // Case is ignored because Windows reports the same folder with different drive-letter case.
   const norm = (p) => String(p).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
   const wanted = roots.map(norm);
-  const inside = (cwd) => cwd && wanted.some((root) => norm(cwd) === root || norm(cwd).startsWith(`${root}/`));
+  const inside = (cwd) => !wanted.length || (cwd && wanted.some((root) => norm(cwd) === root || norm(cwd).startsWith(`${root}/`)));
   let best = null;
   for (const [id, session] of Object.entries(state.sessions)) {
-    if (inside(session.cwd) && (!best || session.updatedAt > state.sessions[best].updatedAt)) best = id;
+    if (keep(session) && inside(session.cwd) && (!best || session.updatedAt > state.sessions[best].updatedAt)) best = id;
   }
   return best;
 }
@@ -111,9 +127,14 @@ export function reduce(state, ev) {
   switch (ev.event) {
     case 'SessionStart':
       break;
+    case 'ModelCall':
+      // Only the first model call of a turn starts a task; the others are steps inside it.
+      if (session.startedAt && !session.endedAt) break;
+    // falls through
     case 'UserPromptSubmit': {
       const fresh = newSession();
       fresh.cwd = session.cwd;
+      fresh.agent = session.agent;
       fresh.startedAt = now;
       fresh.roles.BA = { ...idleRole(), state: 'working', tool: 'Reading prompt', running: 1 };
       session = fresh;
@@ -184,6 +205,7 @@ export function reduce(state, ev) {
   }
 
   if (ev.cwd) session.cwd = ev.cwd;
+  if (ev.agent) session.agent = ev.agent;
   session.updatedAt = now;
   state.sessions[id] = session;
   state.active = id;

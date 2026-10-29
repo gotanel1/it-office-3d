@@ -1,13 +1,19 @@
-// Maps Claude Code tools to the desks of an IT department. Claude Code has no real roles: these rules read
+// Maps the tools of Claude Code, Codex and Antigravity to the desks of an IT department. Claude Code has no real roles: these rules read
 // the tool name, the file it touches and the shell command, and pick the job that would normally do it.
 // The PM (team lead) is not a desk: they walk around and hand out the work.
+// The AIs whose hooks the office understands (scripts/hook.mjs --agent).
+export const AGENTS = ['claude', 'codex', 'antigravity'];
 export const ROLES = ['BA', 'SA', 'Architect', 'UX', 'Dev', 'DBA', 'QA', 'DevOps', 'Security', 'Writer'];
 
-const READ_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'WebSearch', 'WebFetch', 'ToolSearch', 'Skill']);
-const WRITE_TOOLS = new Set(['Edit', 'MultiEdit', 'Write', 'NotebookEdit']);
-const PLAN_TOOLS = new Set(['EnterPlanMode', 'ExitPlanMode', 'TodoWrite', 'TaskCreate', 'TaskUpdate']);
-const ASK_TOOLS = new Set(['AskUserQuestion']);
-const SUBAGENT_TOOLS = new Set(['Agent', 'Task']);
+// Codex reports shell calls as Bash and file edits as apply_patch; Antigravity uses its own snake_case names.
+export const SHELL_TOOLS = new Set(['Bash', 'PowerShell', 'run_command']);
+const READ_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'WebSearch', 'WebFetch', 'ToolSearch', 'Skill',
+  'view_file', 'list_dir', 'find_by_name', 'grep_search', 'search_web', 'read_url_content']);
+const WRITE_TOOLS = new Set(['Edit', 'MultiEdit', 'Write', 'NotebookEdit', 'apply_patch',
+  'write_to_file', 'replace_file_content', 'multi_replace_file_content']);
+const PLAN_TOOLS = new Set(['EnterPlanMode', 'ExitPlanMode', 'TodoWrite', 'TaskCreate', 'TaskUpdate', 'update_plan', 'manage_task']);
+const ASK_TOOLS = new Set(['AskUserQuestion', 'ask_question', 'ask_permission']);
+const SUBAGENT_TOOLS = new Set(['Agent', 'Task', 'invoke_subagent']);
 
 // Checked in order: the first match wins, so the narrow jobs come before the broad ones.
 const COMMAND_RULES = [
@@ -57,6 +63,7 @@ export function roleForTool(tool, command = '', subagentType = '', file = '') {
   if (PLAN_TOOLS.has(tool)) return 'Architect';
   if (WRITE_TOOLS.has(tool)) return firstMatch(FILE_RULES, file ?? '') ?? 'Dev';
   if (SUBAGENT_TOOLS.has(tool)) return roleForAgentType(subagentType);
-  if (tool === 'Bash' || tool === 'PowerShell') return firstMatch(COMMAND_RULES, command ?? '') ?? 'Dev';
+  if (SHELL_TOOLS.has(tool)) return firstMatch(COMMAND_RULES, command ?? '') ?? 'Dev';
+  if (tool === 'generate_image') return 'UX';
   return null;
 }

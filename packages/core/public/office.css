@@ -17,12 +17,13 @@ body.office-mode #pipeline { display: flex; }
 .roster-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; background: #fffdf4; border-bottom: 1px solid #c0c5b4; font-size: 10px; letter-spacing: 1px; }
 .team-count { background: #293c38; color: #f5f6e9; padding: 2px 5px; border-radius: 3px; font-size: 9px; letter-spacing: 0; }
 .roster-list { padding: 7px; display: grid; gap: 5px; overflow: auto; min-height: 0; }
-.office-mode .teammate { width: 100%; display: flex; text-align: left; align-items: center; gap: 7px; min-height: 44px; padding: 3px 6px; border: 1px solid #b5bdac; border-radius: 4px; background: #fffef5; box-shadow: 0 2px 0 #c7cdba; }
+.office-mode .teammate { width: 100%; display: flex; text-align: left; align-items: center; gap: 7px; min-height: 44px; padding: 3px 6px; border: 1px solid #b5bdac; border-left: 4px solid var(--agent, transparent); border-radius: 4px; background: #fffef5; box-shadow: 0 2px 0 #c7cdba; }
 .teammate:hover { background: #f0f2e3; }
 .teammate[aria-pressed='true'] { outline: 2px solid var(--role); outline-offset: -2px; background: #f0f2e3; }
 .portrait { display: block; flex: 0 0 32px; width: 32px; height: 35px; overflow: hidden; background: #e6e7d6; border: 1px solid #c3c8b7; border-radius: 3px; }
 .portrait .sprite { width: 53px; height: 47px; margin-left: -11px; }
 .sprite { display: block; width: 100%; aspect-ratio: 9 / 8; background: url('/assets/team-chibi-v1.png') no-repeat; background-size: 400% 300%; }
+.sprite.lead-sheet { background-image: url('/assets/leads-v1.png'); }
 .teammate-copy { display: grid; gap: 3px; min-width: 0; }
 .teammate-copy strong { font-size: 11px; }
 .role-task { color: #34493f; font-size: 9px; line-height: 1.3; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
@@ -47,7 +48,7 @@ body.office-mode #pipeline { display: flex; }
 .worker.selected .worker-label, .worker:hover .worker-label { outline: 2px solid var(--role, #d4a857); outline-offset: 2px; }
 .task-ticket { position: absolute; right: 14%; top: 49%; background: #fffce9; border: 1px solid #9c8c60; color: #aa7145; border-radius: 1px; font-size: clamp(7px, 1.3cqw, 15px); box-shadow: 1px 2px 1px #1113; }
 .manager { pointer-events: none; }
-.manager .worker-label { background: #263e52; color: #fffdf2; border-color: #6d8491; }
+.manager .worker-label { background: var(--agent, #263e52); color: #fffdf2; border-color: #6d8491; }
 .manager[data-mode='walking'] .sprite { animation: walking .32s ease-in-out infinite alternate; }
 .manager[data-mode='talking'] .sprite { animation: briefing .9s ease-in-out infinite alternate; }
 .pm-bubble { position: absolute; transform: translateX(-50%); z-index: 8; width: max-content; max-width: min(260px, 54%); padding: 8px 10px; background: #fffdec; color: #263b34; border: 2px solid #81957b; border-radius: 4px; box-shadow: 3px 4px 0 #142c3440; font-size: clamp(8px, 1.25cqw, 12px); line-height: 1.45; pointer-events: none; }

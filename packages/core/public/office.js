@@ -1,6 +1,6 @@
 import { eventsUrl } from './chrome.js';
 import { ROLES, messages } from './office-data.js';
-import { EMPTY_ROLE, activeSession, isFinished, planWork, deskPosition, createLead } from './office-model.js';
+import { EMPTY_ROLE, activeSession, crewOf, deskState, isFinished, planWork, deskPosition, createLead, HOMES } from './office-model.js';
 
 const LANG = (new URLSearchParams(location.search).get('lang') || navigator.language || 'en').toLowerCase().startsWith('th') ? 'th' : 'en';
 const TEXT = messages(LANG);
@@ -22,8 +22,8 @@ const button = (className, text, action) => {
   el.addEventListener('click', action);
   return el;
 };
-function sprite(index) {
-  const el = node('span', 'sprite');
+function sprite(index, sheet = '') {
+  const el = node('span', `sprite ${sheet}`.trim());
   el.style.backgroundPosition = `${index % 4 * 100 / 3}% ${Math.floor(index / 4) * 50}%`;
   el.setAttribute('aria-hidden', 'true');
   return el;
@@ -31,11 +31,15 @@ function sprite(index) {
 const truncate = (text, max) => String(text ?? '').length > max ? `${String(text).slice(0, max - 1)}…` : String(text ?? '');
 const roleById = (id) => ROLES.find((r) => r.id === id);
 let snapshot = { active: null, sessions: {} };
-let previous = null;
-const currentSession = () => activeSession(snapshot);
-const roleState = (id) => currentSession()?.roles[id] ?? EMPTY_ROLE;
-const handed = new Set();
-const lead = createLead();
+const roleState = (id) => deskState(snapshot, id);
+// The AIs share one office. Each lead briefs only its own AI's work; Claude keeps the original PM art.
+const LEADS = [
+  { agent: 'claude', label: 'Claude', sprite: () => sprite(10), color: '#c96442' },
+  { agent: 'codex', label: 'GPT', sprite: () => sprite(0, 'lead-sheet'), color: '#2f8f74' },
+  { agent: 'antigravity', label: 'Antigravity', sprite: () => sprite(1, 'lead-sheet'), color: '#2f6fdb' },
+].map((l) => ({ ...l, lead: createLead(HOMES[l.agent]), previous: null, handed: new Set() }));
+const leadOf = (agent) => LEADS.find((l) => l.agent === agent);
+const sessionOf = (agent) => snapshot.sessions[crewOf(snapshot)[agent]] ?? null;
 
 // Real controls and status remain HTML, independent of the generated room artwork.
 
@@ -138,18 +142,20 @@ const workers = ROLES.map((role) => {
   return { role, row, status, task, actor, label, ticket };
 });
 
-const pm = node('div', 'worker manager');
-const pmLabel = node('span', 'worker-label', 'PM');
-const pmCard = node('span', 'task-ticket', '▤');
-pmCard.hidden = true;
-pm.append(sprite(10), pmLabel, pmCard);
-room.append(pm);
-const bubble = node('div', 'pm-bubble');
-const bubbleLine1 = node('div', '');
-const bubbleLine2 = node('div', 'bubble-detail');
-bubble.append(bubbleLine1, bubbleLine2);
-bubble.hidden = true;
-room.append(bubble);
+for (const l of LEADS) {
+  l.el = node('div', 'worker manager');
+  l.el.style.setProperty('--agent', l.color);
+  l.labelEl = node('span', 'worker-label', l.label);
+  l.card = node('span', 'task-ticket', '▤');
+  l.card.hidden = true;
+  l.el.append(l.sprite(), l.labelEl, l.card);
+  l.bubble = node('div', 'pm-bubble');
+  l.line1 = node('div', '');
+  l.line2 = node('div', 'bubble-detail');
+  l.bubble.append(l.line1, l.line2);
+  l.bubble.hidden = true;
+  room.append(l.el, l.bubble);
+}
 
 // The classic renderer's HUD is not used here; the room takes its space.
 document.getElementById('hud').remove();
@@ -184,7 +190,9 @@ function summaryText(r) {
 async function renderInspector() {
   if (!selected) return;
   const id = selected;
-  const sessionId = snapshot.active;
+  // The activity of the AI shown at this desk.
+  const sessionOfDesk = () => crewOf(snapshot)[roleState(id).agent] ?? snapshot.active;
+  const sessionId = sessionOfDesk();
   const version = ++requestId;
   const role = roleById(id);
   const wasCloseFocused = document.activeElement === inspector.querySelector('.inspector-close');
@@ -212,7 +220,7 @@ async function renderInspector() {
     const response = await fetch(`/activity?session=${encodeURIComponent(sessionId ?? '')}`);
     if (!response.ok) throw new Error('activity failed');
     const entries = ((await response.json())[id] ?? []).slice().reverse();
-    if (version !== requestId || selected !== id || snapshot.active !== sessionId) return;
+    if (version !== requestId || selected !== id || sessionOfDesk() !== sessionId) return;
     list.replaceChildren();
     for (const entry of entries) {
       const item = node('li', entry.failed ? 'failed' : '');
@@ -241,30 +249,31 @@ function applyState() {
     const state = r.state === 'working' ? 'working' : r.failed ? 'failed' : isFinished(r) ? 'done' : 'waiting';
     w.row.dataset.state = w.actor.dataset.state = state;
     w.status.textContent = ui[state];
-    w.task.textContent = state === 'working' ? [r.note ?? r.tool, r.detail].filter(Boolean).join(' · ') : '';
+    w.task.textContent = state === 'working' ? [leadOf(r.agent)?.label, r.note ?? r.tool, r.detail].filter(Boolean).join(' · ') : '';
+    w.row.style.setProperty('--agent', state === 'working' ? leadOf(r.agent)?.color ?? 'transparent' : 'transparent');
     w.task.hidden = !w.task.textContent;
     w.label.textContent = `${w.role.label}${isFinished(r) ? ' ✓' : r.failed ? ' !' : ''}`;
     w.actor.setAttribute('aria-label', `${w.role.title} · ${ui[state]} · ${TEXT.showActivity}`);
     w.row.title = `${w.role.title} · ${summaryText(r)}`;
-    w.ticket.hidden = !(handed.has(w.role.id) || isFinished(r));
+    w.ticket.hidden = !(LEADS.some((l) => l.handed.has(w.role.id)) || isFinished(r));
   }
 }
 
-function drawLead() {
-  pm.style.left = `${lead.position.x * 100}%`;
-  pm.style.top = `${lead.position.y * 100}%`;
-  pm.dataset.mode = lead.mode;
-  pm.style.zIndex = lead.position.y > 0.62 ? '5' : '3';
+function drawLead({ agent, label, lead, el, labelEl, card, bubble, line1, line2 }) {
+  el.style.left = `${lead.position.x * 100}%`;
+  el.style.top = `${lead.position.y * 100}%`;
+  el.dataset.mode = lead.mode;
+  el.style.zIndex = lead.position.y > 0.62 ? '5' : '3';
   const task = lead.task;
-  pmCard.hidden = !task || task.type !== 'assign' || lead.handedOver;
-  const asking = currentSession()?.waiting && lead.mode === 'idle';
-  pmLabel.textContent = asking ? TEXT.pmWaiting : task ? `PM → ${roleById(task.role).label}` : 'PM';
+  card.hidden = !task || task.type !== 'assign' || lead.handedOver;
+  const asking = sessionOf(agent)?.waiting && lead.mode === 'idle';
+  labelEl.textContent = asking ? `${label} · ${TEXT.pmWaiting}` : task ? `${label} → ${roleById(task.role).label}` : label;
   bubble.hidden = lead.mode !== 'talking' || !task;
   if (!bubble.hidden) {
     const name = roleById(task.role).label;
-    bubbleLine1.textContent = task.type === 'praise' ? TEXT.praise(name) : task.type === 'wrapUp' ? TEXT.wrapUp(name)
+    line1.textContent = task.type === 'praise' ? TEXT.praise(name) : task.type === 'wrapUp' ? TEXT.wrapUp(name)
       : task.note ? `${name}: ${truncate(task.note, 70)}` : TEXT.ask(name, TEXT.phrases[task.tool] ?? TEXT.desks[task.role] ?? TEXT.fallback);
-    bubbleLine2.textContent = task.type === 'assign' ? truncate(`${task.tool ?? ''}${task.detail ? ` · ${task.detail}` : ''}`, 80) : '';
+    line2.textContent = task.type === 'assign' ? truncate(`${task.tool ?? ''}${task.detail ? ` · ${task.detail}` : ''}`, 80) : '';
     bubble.style.left = `${Math.max(20, Math.min(80, lead.position.x * 100))}%`;
     bubble.style.top = `${lead.position.y * 100 + 3}%`;
     bubble.style.borderColor = roleById(task.role).css;
@@ -279,10 +288,12 @@ function frame(now) {
   if (document.hidden || hiddenByHost) return;
   const dt = Math.min((now - lastFrame) / 1000, 0.1);
   lastFrame = now;
-  const id = lead.tick(dt);
-  if (id) { handed.add(id); workers.find((w) => w.role.id === id).ticket.hidden = false; }
-  drawLead();
-  if (lead.mode !== 'idle') animation = requestAnimationFrame(frame);
+  for (const l of LEADS) {
+    const id = l.lead.tick(dt);
+    if (id) { l.handed.add(id); workers.find((w) => w.role.id === id).ticket.hidden = false; }
+    drawLead(l);
+  }
+  if (LEADS.some((l) => l.lead.mode !== 'idle')) animation = requestAnimationFrame(frame);
 }
 function wake() {
   document.body.classList.toggle('office-paused', hiddenByHost || document.hidden);
@@ -297,22 +308,26 @@ window.addEventListener('message', (e) => {
 const source = new EventSource(eventsUrl());
 source.onmessage = (message) => {
   const next = JSON.parse(message.data);
-  const plan = planWork(previous, next);
-  if (plan.reset) { lead.reset(); handed.clear(); }
-  if (plan.first) {
-    const session = activeSession(next);
-    for (const role of ROLES) {
-      const r = session?.roles[role.id] ?? EMPTY_ROLE;
-      if (r.state === 'working' || isFinished(r)) handed.add(role.id);
+  for (const l of LEADS) {
+    // Each lead plans from its own AI's session, as the single PM did from the active one.
+    const own = { active: crewOf(next)[l.agent] ?? null, sessions: next.sessions };
+    const plan = planWork(l.previous, own);
+    if (plan.reset) { l.lead.reset(); l.handed.clear(); }
+    if (plan.first) {
+      const session = activeSession(own);
+      for (const role of ROLES) {
+        const r = session?.roles[role.id] ?? EMPTY_ROLE;
+        if (r.state === 'working' || isFinished(r)) l.handed.add(role.id);
+      }
     }
+    for (const event of plan.events) l.lead.enqueue(event);
+    l.previous = plan.memory;
   }
-  for (const event of plan.events) lead.enqueue(event);
-  previous = plan.memory;
   snapshot = next;
   applyState();
   if (selected) renderInspector();
   wake();
 };
 applyState();
-drawLead();
+LEADS.forEach(drawLead);
 wake();

@@ -5,6 +5,23 @@ export const EMPTY_ROLE = { state: 'waiting', tool: null, detail: null, done: fa
 export const isFinished = (role) => role.done || role.state === 'done';
 export const activeSession = (snapshot) => snapshot.active ? snapshot.sessions[snapshot.active] : null;
 
+// The session each AI shows (server's `crew`); an older server only names one active Claude session.
+export const crewOf = (snapshot) => snapshot.crew ?? (snapshot.active ? { claude: snapshot.active } : {});
+
+// A desk shows the AI working there, else one that left a failure or finished work there.
+// shortcut: two AIs working one desk at once show only the first, upgrade if that turns out to be common.
+export function deskState(snapshot, roleId) {
+  let best = EMPTY_ROLE;
+  let rank = -1;
+  for (const [agent, id] of Object.entries(crewOf(snapshot))) {
+    const r = snapshot.sessions[id]?.roles[roleId];
+    if (!r) continue;
+    const score = r.state === 'working' ? 3 : r.failed ? 2 : isFinished(r) ? 1 : 0;
+    if (score > rank) { rank = score; best = { ...r, agent }; }
+  }
+  return best;
+}
+
 // Same transition rules as planLeadWork in the original scene: never replay the first snapshot,
 // assign only changed work, skip Thinking, praise completed desks, and let Writer wrap up.
 export function planWork(previous, next) {
@@ -37,6 +54,8 @@ export function planWork(previous, next) {
 // Coordinates are fractions of the generated room image; furniture positions were inspected.
 export const deskPosition = (index) => ({ x: [0.222, 0.361, 0.5, 0.638, 0.777][index % 5], y: index < 5 ? 0.468 : 0.707 });
 export const HOME = { x: 0.135, y: 0.554 };
+// Where each AI's lead waits between briefings: left aisle, right aisle, front floor.
+export const HOMES = { claude: HOME, codex: { x: 0.865, y: 0.554 }, antigravity: { x: 0.43, y: 0.86 } };
 const CORRIDOR_Y = 0.536;
 export function destination(index) {
   const desk = deskPosition(index);
@@ -53,14 +72,14 @@ export function buildPath(from, to) {
   return points;
 }
 
-export function createLead() {
-  const lead = { position: { ...HOME }, queue: [], path: [], task: null, mode: 'idle', talkT: 0, handedOver: false };
+export function createLead(home = HOME) {
+  const lead = { position: { ...home }, queue: [], path: [], task: null, mode: 'idle', talkT: 0, handedOver: false };
   const travel = (target) => { lead.path = buildPath(lead.position, target); lead.mode = 'walking'; };
   const next = () => {
     lead.task = lead.queue.shift() ?? null;
     lead.handedOver = false;
     if (lead.task) travel(destination(ROLES.find((r) => r.id === lead.task.role).index));
-    else travel(HOME);
+    else travel(home);
   };
   lead.enqueue = (task) => {
     lead.queue.push(task);
@@ -71,7 +90,7 @@ export function createLead() {
     lead.queue.length = 0;
     lead.task = null;
     lead.handedOver = false;
-    if (lead.mode !== 'idle') travel(HOME);
+    if (lead.mode !== 'idle') travel(home);
   };
   lead.tick = (dt) => {
     let handed = null;

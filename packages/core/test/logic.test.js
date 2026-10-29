@@ -4,8 +4,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { roleForTool, roleForAgentType } from '../src/rules.js';
-import { normalizeHook, describeTool } from '../src/adapter.js';
-import { createState, reduce, expireStale, STALE_WORKING_MS, activeFor } from '../src/state.js';
+import { normalizeHook, describeTool, fromAntigravity, patchFile } from '../src/adapter.js';
+import { createState, reduce, expireStale, STALE_WORKING_MS, activeFor, crewFor } from '../src/state.js';
 import { TranscriptTail, usageFromRecord, subtractUsage, isAllowedTranscriptPath } from '../src/transcript.js';
 
 test('tools map to the IT department desks', () => {
@@ -327,4 +327,68 @@ test('a permission question waits until the call goes on, and a failed call mark
   assert.equal(state.sessions.s.waiting, null);
   s({ event: 'UserPromptSubmit' });
   assert.equal(state.logs.s, undefined);
+});
+
+test('Codex hooks use the Claude shape, and apply_patch keeps only the file it edits', () => {
+  const ev = normalizeHook({ agent: 'codex', hook_event_name: 'PreToolUse', session_id: 'x1', turn_id: 't1', model: 'gpt', tool_name: 'Bash', tool_input: { command: 'npm test' } });
+  assert.deepEqual([ev.agent, ev.tool, ev.command], ['codex', 'Bash', 'npm test']);
+  assert.equal(normalizeHook({ agent: 'someone', hook_event_name: 'Stop', session_id: 'x1' }).agent, undefined);
+  assert.equal(patchFile('*** Begin Patch\n*** Update File: docs/guide.md\n@@\n-SECRET\n+SECRET2\n*** End Patch'), 'docs/guide.md');
+  assert.equal(patchFile('no patch here'), null);
+  assert.equal(roleForTool('apply_patch', '', '', 'docs/guide.md'), 'Writer');
+  assert.equal(roleForTool('apply_patch', '', '', 'src/a.js'), 'Dev');
+  assert.equal(roleForTool('update_plan'), 'Architect');
+});
+
+test('Antigravity hooks are reshaped and their tools find a desk', () => {
+  const common = { conversationId: 'g1', workspacePaths: ['/work/app'], transcriptPath: '/t.jsonl', modelName: 'gemini' };
+  const pre = normalizeHook({ agent: 'antigravity', ...fromAntigravity('PreToolUse', { ...common, stepIdx: 3, toolCall: { name: 'run_command', args: { CommandLine: 'npm test', Cwd: '/work/app/web' } } }) });
+  assert.deepEqual(pre, { event: 'PreToolUse', session_id: 'g1', agent: 'antigravity', cwd: '/work/app/web', tool: 'run_command', command: 'npm test' });
+  assert.equal(roleForTool(pre.tool, pre.command), 'QA');
+
+  const write = normalizeHook(fromAntigravity('PreToolUse', { ...common, toolCall: { name: 'write_to_file', args: { TargetFile: '/work/app/ui/site.css', CodeContent: 'SECRET', Description: 'Add the theme' } } }));
+  assert.deepEqual([write.path, write.note, write.cwd], ['ui/site.css', 'Add the theme', '/work/app']);
+  assert.equal(roleForTool(write.tool, '', '', write.path), 'UX');
+  assert.ok(!JSON.stringify(write).includes('SECRET'));
+  assert.equal(roleForTool('view_file'), 'SA');
+  assert.equal(roleForTool('invoke_subagent', '', 'researcher'), 'SA');
+
+  assert.equal(normalizeHook(fromAntigravity('PostToolUse', { ...common, toolCall: { name: 'run_command', args: {} }, error: 'SECRET' })).failed, true);
+  assert.equal(normalizeHook(fromAntigravity('PreInvocation', { ...common, invocationNum: 1 })).event, 'ModelCall');
+  assert.equal(normalizeHook(fromAntigravity('Stop', { ...common, fullyIdle: true })).event, 'Stop');
+  // Subagents still running: the task is not over.
+  assert.equal(fromAntigravity('Stop', { ...common, fullyIdle: false }), null);
+  assert.equal(fromAntigravity('PreToolUse', null), null);
+});
+
+test('a model call starts a task only when none is running, and sessions keep their AI', () => {
+  let s = createState();
+  const send = (ev) => { s = reduce(s, { session_id: 'g1', agent: 'antigravity', ...ev }); };
+  send({ event: 'ModelCall' });
+  const started = s.sessions.g1.startedAt;
+  assert.ok(started);
+  assert.equal(s.sessions.g1.agent, 'antigravity');
+  send({ event: 'PreToolUse', tool: 'view_file', path: 'a.js' });
+  send({ event: 'ModelCall' });
+  assert.equal(s.sessions.g1.roles.SA.state, 'working', 'a later model call is a step, not a new task');
+  send({ event: 'Stop' });
+  send({ event: 'ModelCall' });
+  assert.equal(s.sessions.g1.endedAt, null, 'after a stop, the next model call starts a new task');
+  assert.equal(s.sessions.g1.agent, 'antigravity');
+  s = reduce(s, { session_id: 'c1', event: 'UserPromptSubmit' });
+  assert.equal(s.sessions.c1.agent, 'claude');
+});
+
+test('each AI gets its newest session in the shared office, or only the picked one', () => {
+  let s = createState();
+  const at = (ev) => { s = reduce(s, ev); };
+  at({ session_id: 'c-old', agent: 'claude', event: 'UserPromptSubmit', cwd: '/w/app' });
+  at({ session_id: 'x1', agent: 'codex', event: 'UserPromptSubmit', cwd: '/w/app' });
+  at({ session_id: 'c-new', agent: 'claude', event: 'UserPromptSubmit', cwd: '/w/app' });
+  at({ session_id: 'g1', agent: 'antigravity', event: 'ModelCall', cwd: '/elsewhere' });
+  // Events in one millisecond tie; make the older Claude session clearly older.
+  s.sessions['c-old'].updatedAt -= 1000;
+  assert.deepEqual(crewFor(s), { claude: 'c-new', codex: 'x1', antigravity: 'g1' });
+  assert.deepEqual(crewFor(s, null, ['/w/app']), { claude: 'c-new', codex: 'x1' });
+  assert.deepEqual(crewFor(s, 'x1'), { codex: 'x1' });
 });

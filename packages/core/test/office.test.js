@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ROLES } from '../public/office-data.js';
-import { planWork, createLead, HOME, destination, buildPath } from '../public/office-model.js';
+import { planWork, createLead, HOME, destination, buildPath, deskState } from '../public/office-model.js';
 import { createState, reduce } from '../src/state.js';
 import { startServer } from '../src/server.js';
 
@@ -98,4 +98,20 @@ test('new scene modules and generated assets are served locally with correct con
     assert.equal((await fetch(server.url + 'office.css')).status, 200);
     assert.match(await (await fetch(server.url)).text(), /office\.js/);
   } finally { await server.close(); }
+});
+
+test('a shared desk shows the AI working there, else one that failed or finished there', () => {
+  const role = (state, extra = {}) => ({ state, tool: null, detail: null, done: false, ...extra });
+  const snap = {
+    crew: { claude: 'c', codex: 'x' },
+    sessions: {
+      c: { roles: { Dev: role('waiting', { done: true }), QA: role('waiting') } },
+      x: { roles: { Dev: role('working', { tool: 'apply_patch' }), QA: role('waiting', { failed: true }) } },
+    },
+  };
+  assert.deepEqual([deskState(snap, 'Dev').agent, deskState(snap, 'Dev').tool], ['codex', 'apply_patch']);
+  assert.equal(deskState(snap, 'QA').agent, 'codex');
+  assert.equal(deskState(snap, 'BA').state, 'waiting');
+  // An older server sends only `active`, which is Claude's session.
+  assert.equal(deskState({ active: 'c', sessions: snap.sessions }, 'Dev').agent, 'claude');
 });

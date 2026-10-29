@@ -1,6 +1,8 @@
 // Turns the JSON that Claude Code sends to a hook on stdin into the generic event the scene understands.
 // Field names follow the Claude Code hooks reference: hook_event_name, session_id, transcript_path, cwd,
-// tool_name, tool_input, agent_type. Unknown shapes are ignored rather than rejected.
+// tool_name, tool_input, agent_type. Codex sends the same names; Antigravity's input is first reshaped by
+// fromAntigravity. Unknown shapes are ignored rather than rejected.
+import { AGENTS, SHELL_TOOLS } from './rules.js';
 
 const EVENT_NAMES = {
   SessionStart: 'SessionStart',
@@ -12,6 +14,8 @@ const EVENT_NAMES = {
   Notification: 'Notification',
   SubagentStop: 'SubagentStop',
   Stop: 'Stop',
+  // Antigravity has no prompt event; its first model call of a turn starts the task instead.
+  PreInvocation: 'ModelCall',
 };
 
 const clip = (text, max) => {
@@ -28,7 +32,7 @@ function shortPath(p) {
 // One short line about what the tool is doing. Never includes file contents or prompts.
 export function describeTool(tool, input = {}) {
   if (!input || typeof input !== 'object') return null;
-  if (tool === 'Bash' || tool === 'PowerShell') return input.command ? { command: clip(input.command, 120) } : null;
+  if (SHELL_TOOLS.has(tool)) return input.command ? { command: clip(input.command, 120) } : null;
   const file = input.file_path ?? input.notebook_path ?? input.path;
   if (file) return { path: shortPath(file) };
   if (input.pattern) return { path: clip(input.pattern, 80) };
@@ -46,6 +50,7 @@ export function normalizeHook(raw) {
     event,
     session_id: typeof raw.session_id === 'string' ? raw.session_id : 'default',
   };
+  if (AGENTS.includes(raw.agent)) ev.agent = raw.agent;
   if (typeof raw.transcript_path === 'string') ev.transcript_path = raw.transcript_path;
   if (typeof raw.cwd === 'string') ev.cwd = raw.cwd;
 
@@ -66,4 +71,34 @@ export function normalizeHook(raw) {
   if (event === 'Notification' && typeof raw.notification_type === 'string') ev.notification_type = raw.notification_type.slice(0, 60);
   if (event === 'SubagentStop' && typeof raw.agent_type === 'string') ev.agent_type = raw.agent_type;
   return ev;
+}
+
+// The first file a Codex apply_patch touches. The patch text itself (file contents) is never kept.
+export function patchFile(patch) {
+  return typeof patch === 'string' ? patch.match(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/m)?.[1].trim() ?? null : null;
+}
+
+// Antigravity's hook input in Claude Code's shape. Its stdin has no event name, so the hook command line
+// passes it. Field names follow antigravity.google/docs/hooks (conversationId, workspacePaths, toolCall).
+export function fromAntigravity(event, raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const args = raw.toolCall?.args && typeof raw.toolCall.args === 'object' ? raw.toolCall.args : {};
+  // Stop with fullyIdle false means subagents are still working, so the task is not over yet.
+  if (event === 'Stop' && raw.fullyIdle === false) return null;
+  return {
+    hook_event_name: event === 'PostToolUse' && raw.error ? 'PostToolUseFailure' : event,
+    session_id: raw.conversationId,
+    cwd: args.Cwd ?? raw.workspacePaths?.[0],
+    tool_name: raw.toolCall?.name,
+    tool_input: {
+      command: args.CommandLine,
+      file_path: args.AbsolutePath ?? args.TargetFile,
+      path: args.DirectoryPath ?? args.SearchPath ?? args.SearchDirectory,
+      pattern: args.Pattern,
+      query: args.Query ?? args.query,
+      url: args.Url,
+      description: args.Description,
+      subagent_type: args.Role ?? args.TypeName,
+    },
+  };
 }

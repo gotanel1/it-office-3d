@@ -32,3 +32,20 @@ Cell order left to right then top to bottom:
 11 project manager man, gray hair, glasses, navy suit, white shirt, carrying small ivory task clipboard.
 12 leave completely empty and transparent.
 Keep all bodies completely separated inside their own cells. Transparent alpha background. Workers only, no desk or chairs.
+
+## Lead characters generation prompt
+
+Generated with the built-in `image_gen` tool on 2026-10-29, using `team-chibi-v1.png` as the visual reference. Final asset: `leads-v1.png`, 1536 x 1024 RGBA, 4 columns x 3 rows; only cells 1 and 2 are occupied.
+
+Prompt used for the selected generation:
+
+```text
+This is a sprite sheet edit. Preserve the exact original sizes of all heads and bodies and the original positions of the first two figures in this image.
+Change the FIRST figure (pink blouse woman) into a calm friendly male team lead: neat short black hair, round glasses, white collared shirt, charcoal cardigan with a tiny mint pocket square, dark trousers and shoes, small ivory blank clipboard in hands.
+Change the SECOND figure (blue shirt man) into an energetic friendly male team lead: wavy brown hair, bright blue zip jacket, white tee, light gray trousers, blue-white sneakers hovering a few pixels with a tiny blue glow at soles, ivory blank clipboard in hands.
+Keep these first two figures EXACTLY as small as they are in the input. Preserve their original positions, head sizes and baseline. Do not reframe or crop or enlarge.
+Remove the remaining figures (yellow hardhat, pink bob and beret, headset hoodie, beanie, orange cap, navy headset, sunglasses suit, cyan blouse, gray hair suit). All of their cells must be completely empty transparent alpha=0, with no replacement figures.
+1536x1024 PNG RGBA. 4 equal columns and 3 equal rows. Only two figures left in the first two cells, at top left. Full-body original three-quarter elevated frontal view, original painted 3D chibi style, original lighting. Entire lower two rows transparent. Entire right two columns transparent. No text, logos, brands, letters, watermarks, grid, background or ground shadows.
+```
+
+Post-processing, explicitly authorized by the user: preserved the generated artwork at its native scale; translated cell 1 by (-14, -13) px and cell 2 by (+15, -18) px to center the figures and align the standing/hovering baseline. Removed stray alpha values of 8 or lower and isolated each character within its cell. All pixels at x >= 768 or y >= 341 are fully transparent; no source asset was modified.

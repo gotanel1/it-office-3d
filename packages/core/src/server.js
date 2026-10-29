@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createState, reduce, expireStale, pruneSessions, activeFor } from './state.js';
+import { createState, reduce, expireStale, pruneSessions, activeFor, crewFor } from './state.js';
 import { normalizeHook } from './adapter.js';
 import { TranscriptTail, isAllowedTranscriptPath, subtractUsage } from './transcript.js';
 
@@ -42,6 +42,7 @@ export function startServer({ port = 0, preferredPort = null, idleExitMs = 0, on
 
   const snapshotFor = (sessionId, roots = []) => ({
     active: activeFor(state, sessionId, roots),
+    crew: crewFor(state, sessionId, roots),
     sessions: state.sessions,
   });
 

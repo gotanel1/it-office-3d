@@ -1,10 +1,17 @@
-// Claude Code hook: forwards a small, redacted copy of the hook event to the local 3D office server.
+// Claude Code, Codex and Antigravity hook: forwards a small, redacted copy of the hook event to the local 3D
+// office server. Claude Code runs it plain; the others add `--agent codex` or
+// `--agent antigravity --event <EventName>` (Antigravity's stdin does not name the event).
 //
 // Rules this script keeps:
 // - It never writes to stdout (for some events stdout would be added to Claude's context).
 // - It always exits 0, and fast, so it can never slow down or break a Claude Code session.
 // - It only forwards what the scene needs. Prompts, file contents and tool output are dropped here.
 import { readInfo, postJson, ensureServer, log } from './lib.mjs';
+import { fromAntigravity, patchFile } from '../packages/core/src/adapter.js';
+import { AGENTS } from '../packages/core/src/rules.js';
+
+const arg = (name) => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : undefined; };
+const agent = AGENTS.includes(arg('--agent')) ? arg('--agent') : 'claude';
 
 const INPUT_KEYS = ['command', 'file_path', 'notebook_path', 'path', 'pattern', 'url', 'query', 'description', 'subagent_type'];
 
@@ -30,6 +37,7 @@ function readStdin(timeoutMs = 3000) {
 
 function redact(input) {
   const out = {
+    agent,
     hook_event_name: clip(input.hook_event_name, 60),
     session_id: clip(input.session_id, 120),
     transcript_path: clip(input.transcript_path, 600),
@@ -40,9 +48,17 @@ function redact(input) {
     is_interrupt: input.is_interrupt === true ? true : undefined,
   };
   if (input.tool_input && typeof input.tool_input === 'object') {
+    const toolInput = { ...input.tool_input };
+    // Codex may send a command as an argv array.
+    if (Array.isArray(toolInput.command)) toolInput.command = toolInput.command.join(' ');
+    // A Codex patch carries file contents: keep only the file it edits.
+    if (input.tool_name === 'apply_patch') {
+      toolInput.file_path = patchFile(toolInput.command) ?? undefined;
+      toolInput.command = undefined;
+    }
     out.tool_input = {};
     for (const key of INPUT_KEYS) {
-      const value = clip(input.tool_input[key]);
+      const value = clip(toolInput[key]);
       if (value !== undefined) out.tool_input[key] = value;
     }
   }
@@ -60,8 +76,9 @@ async function send(port, payload) {
 
 try {
   const raw = await readStdin();
-  if (raw.trim()) {
-    const payload = redact(JSON.parse(raw));
+  const input = raw.trim() && (agent === 'antigravity' ? fromAntigravity(arg('--event'), JSON.parse(raw)) : JSON.parse(raw));
+  if (input) {
+    const payload = redact(input);
     // Once per chat and per prompt, also make sure the server is not one left by an older version;
     // tool events skip that extra request.
     const info = ['SessionStart', 'UserPromptSubmit'].includes(payload.hook_event_name) ? await ensureServer({ wait: 3000 }) : readInfo();
