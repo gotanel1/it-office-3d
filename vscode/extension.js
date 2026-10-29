@@ -14,10 +14,47 @@ const POLL_MS = 2000;
 const PLUGIN = 'it-office-3d';
 const INSTALL = [`claude plugin marketplace add gotanel1/${PLUGIN}`, `claude plugin install ${PLUGIN}@${PLUGIN}`];
 
-// The packaged extension carries a copy of the engine in ./core; running from the repo uses packages/core.
-function daemonFile() {
-  const bundled = path.join(__dirname, 'core', 'src', 'daemon.js');
-  return fs.existsSync(bundled) ? bundled : path.join(__dirname, '..', 'packages', 'core', 'src', 'daemon.js');
+// The packaged extension carries a copy of the repository's engine and hook scripts in ./bundle (same
+// layout as the repository); running from the repo uses the repository itself.
+const BUNDLE = fs.existsSync(path.join(__dirname, 'bundle')) ? path.join(__dirname, 'bundle') : path.join(__dirname, '..');
+const daemonFile = () => path.join(BUNDLE, 'packages', 'core', 'src', 'daemon.js');
+
+// Antigravity runs the hook from a path written in its own config, and VS Code replaces this extension's
+// folder on every update, so the hook runs from a copy in the data folder instead.
+const HOOK_HOME = path.join(os.homedir(), '.claude-code-3d', 'hook');
+
+// The AIs this computer has (their settings folder exists) and whether each already reports to the office.
+function aiStatus(home = os.homedir()) {
+  const read = (...p) => { try { return fs.readFileSync(path.join(home, ...p), 'utf8'); } catch { return ''; } };
+  const has = (dir) => fs.existsSync(path.join(home, dir));
+  return [
+    { id: 'claude', name: 'Claude Code', present: has('.claude'), connected: pluginInstalled(path.join(home, '.claude', 'plugins', 'installed_plugins.json')) === true },
+    { id: 'codex', name: 'Codex', present: has('.codex'), connected: read('.codex', 'config.toml').includes(`[plugins."${PLUGIN}@${PLUGIN}"]`) },
+    { id: 'antigravity', name: 'Antigravity', present: has('.gemini'), connected: read('.gemini', 'config', 'hooks.json').includes(`"${PLUGIN}"`) },
+  ];
+}
+
+// Terminal commands that connect one AI. Claude Code and Codex install the plugin from GitHub; Antigravity
+// gets the hook written into its hooks.json by connect.mjs, run from the stable copy.
+function connectCommands(id, hookHome = HOOK_HOME) {
+  if (id === 'claude') return INSTALL;
+  if (id === 'codex') return [`codex plugin marketplace add gotanel1/${PLUGIN}`, `codex plugin add ${PLUGIN}@${PLUGIN}`];
+  return [`node "${path.join(hookHome, 'scripts', 'connect.mjs')}" antigravity`];
+}
+
+// Refreshes the copy Antigravity's hook runs from when this extension version has not written it yet.
+// The files are overwritten in place, never deleted first, so a hook running meanwhile still finds them.
+function copyHook(version) {
+  const stamp = path.join(HOOK_HOME, 'version');
+  try {
+    if (fs.readFileSync(stamp, 'utf8') === version) return;
+  } catch {
+    // No copy yet.
+  }
+  for (const part of ['scripts', path.join('packages', 'core')]) {
+    fs.cpSync(path.join(BUNDLE, part), path.join(HOOK_HOME, part), { recursive: true, force: true });
+  }
+  fs.writeFileSync(stamp, version);
 }
 
 function readInfo() {
@@ -276,23 +313,34 @@ function watchStatus(item) {
   return { dispose: () => clearInterval(timer) };
 }
 
-// Asked once per window: without the plugin the panel would sit still with no explanation.
-async function offerPluginInstall() {
-  if (pluginInstalled() !== false) return;
-  const choice = await vscode.window.showWarningMessage(
-    `IT-Office-3D needs the Claude Code plugin "${PLUGIN}" to see what Claude is doing.`,
-    'Install in Terminal',
-    'Copy commands',
-  );
-  if (choice === 'Install in Terminal') installPlugin();
-  else if (choice === 'Copy commands') await vscode.env.clipboard.writeText(INSTALL.join('\n'));
+const names = (list) => list.map((a) => a.name).join(', ');
+
+// Asked once per window: an AI that is installed but not connected would leave the office still.
+async function offerConnect(context) {
+  const todo = aiStatus().filter((a) => a.present && !a.connected);
+  if (!todo.length) return;
+  const choice = await vscode.window.showWarningMessage(`IT-Office-3D can show what ${names(todo)} ${todo.length > 1 ? 'are' : 'is'} doing. Connect now?`, 'Connect', 'Not now');
+  if (choice === 'Connect') connectAIs(context);
 }
 
-function installPlugin() {
+// One click for every AI found: the office hook goes into each one's own settings, through a terminal so
+// the user sees each command run.
+function connectAIs(context) {
+  const all = aiStatus();
+  const todo = all.filter((a) => a.present && !a.connected);
+  if (!todo.length) {
+    const found = all.filter((a) => a.present);
+    vscode.window.showInformationMessage(found.length ? `${names(found)}: already connected.` : 'No Claude Code, Codex or Antigravity found on this computer.');
+    return;
+  }
+  if (todo.some((a) => a.id === 'antigravity')) copyHook(context.extension.packageJSON.version);
   const terminal = vscode.window.createTerminal('IT-Office-3D');
   terminal.show();
-  INSTALL.forEach((cmd) => terminal.sendText(cmd));
-  vscode.window.showInformationMessage('When the install finishes, run "Reload Window" and start a new Claude Code chat.');
+  for (const a of todo) connectCommands(a.id).forEach((cmd) => terminal.sendText(cmd));
+  const next = [];
+  if (todo.some((a) => a.id === 'claude')) next.push('start a new Claude Code chat');
+  if (todo.some((a) => a.id === 'codex')) next.push('in Codex, type /hooks and approve the it-office-3d hooks');
+  vscode.window.showInformationMessage(`When the terminal finishes, run "Reload Window"${next.length ? `, then ${next.join(' and ')}` : ''}.`);
 }
 
 // The plugin's installed version from Claude Code's plugin list, or null.
@@ -425,22 +473,30 @@ function activate(context) {
     vscode.commands.registerCommand('claudeCode3d.reset', reset),
     vscode.commands.registerCommand('claudeCode3d.chooseSession', () => chooseSession(context, scene)),
     vscode.commands.registerCommand('claudeCode3d.diagnostics', () => showDiagnostics(context)),
-    vscode.commands.registerCommand('claudeCode3d.installPlugin', installPlugin),
+    vscode.commands.registerCommand('claudeCode3d.connect', () => connectAIs(context)),
     // A changed folder list changes which chats this window follows.
     vscode.workspace.onDidChangeWorkspaceFolders(() => scene.load()),
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('itOffice3d.language')) scene.load();
     }),
   );
-  // First run: the walkthrough covers the plugin too, so it replaces the warning once.
+  // An update brings a new hook: keep Antigravity's copy in step with this version.
+  if (aiStatus().find((a) => a.id === 'antigravity').connected) {
+    try {
+      copyHook(context.extension.packageJSON.version);
+    } catch {
+      // The old copy keeps working; the next start tries again.
+    }
+  }
+  // First run: the walkthrough covers connecting too, so it replaces the warning once.
   if (!context.globalState.get('welcomed')) {
     context.globalState.update('welcomed', true);
     vscode.commands.executeCommand('workbench.action.openWalkthrough', `${context.extension.id}#getStarted`, false);
   } else {
-    offerPluginInstall();
+    offerConnect(context);
   }
 }
 
 function deactivate() {}
 
-module.exports = { activate, deactivate, describe, notification, pluginInstalled, pluginVersion, sceneQuery, sceneLanguage, formatDiagnostics, insideRoots };
+module.exports = { activate, deactivate, describe, notification, pluginInstalled, pluginVersion, aiStatus, connectCommands, sceneQuery, sceneLanguage, formatDiagnostics, insideRoots };

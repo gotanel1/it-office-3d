@@ -9,7 +9,7 @@ Module._load = function (request, ...rest) {
   if (request === 'vscode') return { MarkdownString: class { constructor(value) { this.value = value; } } };
   return load.call(this, request, ...rest);
 };
-const { describe, notification, pluginInstalled, pluginVersion, sceneQuery, sceneLanguage, formatDiagnostics, insideRoots } = require('../extension.js');
+const { describe, notification, pluginInstalled, pluginVersion, aiStatus, connectCommands, sceneQuery, sceneLanguage, formatDiagnostics, insideRoots } = require('../extension.js');
 
 const idle = { state: 'waiting', tool: null, detail: null, done: false };
 const snapshot = (session) => ({ active: 's', sessions: { s: session } });
@@ -150,4 +150,24 @@ test('only files inside the workspace may be opened from the scene', () => {
   assert.equal(insideRoots(path.join(root + '-other', 'a.js'), [root]), false);
   assert.equal(insideRoots(path.join(root, '..', 'secret.txt'), [root]), false);
   assert.equal(insideRoots(path.join(root, 'a.js'), []), false);
+});
+
+test('Connect AIs finds each AI and knows which ones already report to the office', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ito3d-home-'));
+  const status = () => Object.fromEntries(aiStatus(home).map((a) => [a.id, [a.present, a.connected]]));
+  assert.deepEqual(status(), { claude: [false, false], codex: [false, false], antigravity: [false, false] });
+  fs.mkdirSync(path.join(home, '.claude', 'plugins'), { recursive: true });
+  fs.mkdirSync(path.join(home, '.codex'));
+  fs.mkdirSync(path.join(home, '.gemini', 'config'), { recursive: true });
+  assert.deepEqual(status(), { claude: [true, false], codex: [true, false], antigravity: [true, false] });
+  fs.writeFileSync(path.join(home, '.claude', 'plugins', 'installed_plugins.json'), JSON.stringify({ plugins: { 'it-office-3d@it-office-3d': [{}] } }));
+  fs.writeFileSync(path.join(home, '.codex', 'config.toml'), '[plugins."it-office-3d@it-office-3d"]\nenabled = true\n');
+  fs.writeFileSync(path.join(home, '.gemini', 'config', 'hooks.json'), JSON.stringify({ 'it-office-3d': {} }));
+  assert.deepEqual(status(), { claude: [true, true], codex: [true, true], antigravity: [true, true] });
+
+  assert.match(connectCommands('codex').join('\n'), /codex plugin add it-office-3d@it-office-3d/);
+  assert.equal(connectCommands('antigravity', '/data/hook')[0], `node "${path.join('/data/hook', 'scripts', 'connect.mjs')}" antigravity`);
 });

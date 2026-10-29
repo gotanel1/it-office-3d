@@ -1,8 +1,8 @@
 {
   "name": "claude-code-3d",
   "displayName": "IT-Office-3D",
-  "description": "Watch Claude Code work in a cozy 2.5D office with live teammates, task status and activity. Local only, read only.",
-  "version": "1.1.0",
+  "description": "Watch Claude Code, Codex and Antigravity work in a cozy 2.5D office with live teammates, task status and activity. Local only, read only.",
+  "version": "1.2.0",
   "icon": "media/logo.png",
   "publisher": "gotanel1",
   "license": "MIT",
@@ -73,8 +73,8 @@
         "category": "IT-Office-3D"
       },
       {
-        "command": "claudeCode3d.installPlugin",
-        "title": "Install Claude Code Plugin",
+        "command": "claudeCode3d.connect",
+        "title": "Connect AIs",
         "category": "IT-Office-3D"
       }
     ],
@@ -131,17 +131,17 @@
       {
         "id": "getStarted",
         "title": "Get started with IT-Office-3D",
-        "description": "Watch Claude Code work as a 3D IT office, in a few steps.",
+        "description": "Watch Claude Code, Codex and Antigravity work in one office, in a few steps.",
         "steps": [
           {
-            "id": "installPlugin",
-            "title": "Install the Claude Code plugin",
-            "description": "The plugin reports what Claude does. Without it the office stays still.\n[Install in Terminal](command:claudeCode3d.installPlugin)",
+            "id": "connect",
+            "title": "Connect your AIs",
+            "description": "Claude Code, Codex and Antigravity report what they do through a small hook. Without it the office stays still.\n[Connect AIs](command:claudeCode3d.connect)",
             "media": {
               "markdown": "media/walkthrough/plugin.md"
             },
             "completionEvents": [
-              "onCommand:claudeCode3d.installPlugin"
+              "onCommand:claudeCode3d.connect"
             ]
           },
           {

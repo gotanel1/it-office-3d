@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0
+- **Connect AIs:** one command (and the first-run prompt) finds Claude Code, Codex and Antigravity on this computer and connects only the ones that are not connected yet, in a terminal you can watch. Replaces **Install Claude Code Plugin**.
+- **Antigravity without a clone:** the extension carries the hook scripts and keeps a copy in `~/.claude-code-3d/hook`, refreshed after each update, so Antigravity's hook keeps working when VS Code replaces the extension folder.
+- **Still yours to do once:** approve the it-office-3d hooks in Codex with `/hooks`, and start a new Claude Code chat.
+
 ## 1.1.0
 - **Three AIs in one office:** Codex (GPT) and Antigravity now work next to Claude Code. Each AI has its own lead (Claude, GPT, Antigravity) who briefs only that AI's work, and the team list shows which AI is doing what at each desk.
 - **Session picker:** names the AI of each session. **All AIs** shows every AI at once; picking a session shows only that one.
