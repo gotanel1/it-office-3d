@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ROLES } from '../public/office-data.js';
-import { planWork, createLead, HOME, destination, buildPath, formatElapsed } from '../public/office-model.js';
+import { planWork, createLead, HOME, destination, buildPath } from '../public/office-model.js';
 import { createState, reduce } from '../src/state.js';
 import { startServer } from '../src/server.js';
 
@@ -80,11 +80,6 @@ test('PM queue caps at three pending tasks and reset discards old-session work',
   assert.deepEqual(path.at(-1), destination(9));
 });
 
-test('elapsed clock keeps original minute/hour format', () => {
-  assert.equal(formatElapsed(0), '00:00');
-  assert.equal(formatElapsed(61000), '01:01');
-  assert.equal(formatElapsed(3661000), '1:01:01');
-});
 
 test('new scene modules and generated assets are served locally with correct content types', async () => {
   const server = await startServer();

@@ -1,6 +1,6 @@
 import { eventsUrl } from './chrome.js';
 import { ROLES, messages } from './office-data.js';
-import { EMPTY_ROLE, activeSession, isFinished, planWork, deskPosition, createLead, formatElapsed } from './office-model.js';
+import { EMPTY_ROLE, activeSession, isFinished, planWork, deskPosition, createLead } from './office-model.js';
 
 const LANG = (new URLSearchParams(location.search).get('lang') || navigator.language || 'en').toLowerCase().startsWith('th') ? 'th' : 'en';
 const TEXT = messages(LANG);
@@ -8,8 +8,7 @@ const tr = (en, th) => LANG === 'th' ? th : en;
 document.documentElement.lang = LANG;
 const ui = {
   waiting: tr('Idle', 'พร้อมรับงาน'), working: tr('Working', 'กำลังทำงาน'), done: tr('Done', 'เสร็จแล้ว'),
-  failed: tr('Failed', 'ไม่ผ่าน'), connecting: tr('Connecting', 'กำลังเชื่อมต่อ'),
-  live: tr('Live connection', 'เชื่อมต่อแล้ว'), offline: tr('Reconnecting…', 'กำลังเชื่อมต่อใหม่…'),
+  failed: tr('Failed', 'ไม่ผ่าน'),
 };
 const node = (tag, className, text) => {
   const el = document.createElement(tag);
@@ -33,22 +32,12 @@ const truncate = (text, max) => String(text ?? '').length > max ? `${String(text
 const roleById = (id) => ROLES.find((r) => r.id === id);
 let snapshot = { active: null, sessions: {} };
 let previous = null;
-let connected = false;
 const currentSession = () => activeSession(snapshot);
 const roleState = (id) => currentSession()?.roles[id] ?? EMPTY_ROLE;
-const worked = new Set();
 const handed = new Set();
 const lead = createLead();
 
 // Real controls and status remain HTML, independent of the generated room artwork.
-const topbar = node('header', 'office-topbar');
-const brand = node('div', 'office-brand');
-brand.append(node('span', 'brand-mark', 'IT'), node('strong', '', 'IT-OFFICE'), node('span', 'edition', '2.5D'));
-const subtitle = node('span', 'office-subtitle', tr('A little office. Real work.', 'ออฟฟิศเล็ก ๆ ที่สะท้อนงานจริง'));
-const connection = node('span', 'connection', ui.connecting);
-connection.setAttribute('role', 'status');
-topbar.append(brand, subtitle, connection);
-document.body.prepend(topbar);
 
 const pipeline = document.getElementById('pipeline');
 pipeline.setAttribute('aria-label', tr('IT team', 'ทีมไอที'));
@@ -160,26 +149,8 @@ bubble.append(bubbleLine1, bubbleLine2);
 bubble.hidden = true;
 room.append(bubble);
 
-const hud = document.getElementById('hud');
-const elapsed = document.getElementById('elapsed');
-const tokens = document.getElementById('tokens');
-const progress = document.getElementById('progress-bar').parentElement;
-progress.setAttribute('role', 'progressbar');
-progress.setAttribute('aria-label', tr('Participating desks (not a time estimate)', 'โต๊ะที่ร่วมทำงาน (ไม่ใช่เวลาที่เหลือ)'));
-progress.setAttribute('aria-valuemin', '0');
-progress.setAttribute('aria-valuemax', '100');
-const reset = document.getElementById('reset');
-reset.textContent = tr('Reset', 'รีเซ็ต');
-const mission = node('div', 'mission');
-mission.append(node('span', 'eyebrow', tr('CURRENT TASK', 'งานปัจจุบัน')));
-const missionTitle = node('strong', 'mission-title', TEXT.waiting);
-const missionDetail = node('span', 'mission-detail', tr('Activity appears when Claude Code starts working.', 'สถานะจะแสดงเมื่อ Claude Code เริ่มทำงาน'));
-mission.append(missionTitle, missionDetail);
-const metrics = node('div', 'office-metrics');
-elapsed.parentElement.querySelector('.label').textContent = tr('ELAPSED', 'เวลาทำงาน');
-tokens.parentElement.querySelector('.label').textContent = tr('TOKENS IN / OUT', 'โทเคนเข้า / ออก');
-metrics.append(elapsed.parentElement, tokens.parentElement, progress, reset);
-hud.replaceChildren(mission, metrics);
+// The classic renderer's HUD is not used here; the room takes its space.
+document.getElementById('hud').remove();
 
 const inspector = node('aside', 'office-inspector');
 inspector.hidden = true;
@@ -261,35 +232,11 @@ async function renderInspector() {
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && selected) closeInspector(); });
 
-function updateMission() {
-  const session = currentSession();
-  const busy = ROLES.filter((r) => roleState(r.id).state === 'working');
-  count.textContent = `${busy.length} / 10`;
-  hud.classList.toggle('needs-you', Boolean(session?.waiting));
-  if (!connected) {
-    missionTitle.textContent = ui.offline;
-    missionDetail.textContent = tr('Showing the last received state.', 'กำลังแสดงสถานะล่าสุดที่ได้รับ');
-  } else if (session?.waiting) {
-    missionTitle.textContent = TEXT.needsYou;
-    missionDetail.textContent = `${TEXT.answerIn}${session.waiting.tool ? ` · ${session.waiting.tool}` : ''}`;
-  } else if (busy.length) {
-    const role = busy[0];
-    const r = roleState(role.id);
-    missionTitle.textContent = `${role.label} · ${r.note ?? r.tool ?? ui.working}`;
-    missionDetail.textContent = r.detail || role.title;
-  } else {
-    missionTitle.textContent = session?.endedAt ? TEXT.finished : TEXT.waiting;
-    missionDetail.textContent = session?.endedAt ? tr('The team is ready for the next task.', 'ทีมพร้อมสำหรับงานถัดไป') : tr('Activity appears when Claude Code starts working.', 'สถานะจะแสดงเมื่อ Claude Code เริ่มทำงาน');
-  }
-  missionTitle.title = missionTitle.textContent;
-  missionDetail.title = missionDetail.textContent;
-}
-
 function applyState() {
+  count.textContent = `${ROLES.filter((r) => roleState(r.id).state === 'working').length} / 10`;
   for (const w of workers) {
     const r = roleState(w.role.id);
     const state = r.state === 'working' ? 'working' : r.failed ? 'failed' : isFinished(r) ? 'done' : 'waiting';
-    if (state === 'working') worked.add(w.role.id);
     w.row.dataset.state = w.actor.dataset.state = state;
     w.status.textContent = ui[state];
     w.label.textContent = `${w.role.label}${isFinished(r) ? ' ✓' : r.failed ? ' !' : ''}`;
@@ -297,10 +244,6 @@ function applyState() {
     w.row.title = `${w.role.title} · ${summaryText(r)}`;
     w.ticket.hidden = !(handed.has(w.role.id) || isFinished(r));
   }
-  const value = currentSession()?.endedAt ? 100 : worked.size / (worked.size + 1) * 100;
-  progress.firstElementChild.style.width = `${value}%`;
-  progress.setAttribute('aria-valuenow', String(Math.round(value)));
-  updateMission();
 }
 
 function drawLead() {
@@ -348,12 +291,10 @@ window.addEventListener('message', (e) => {
   if (e.data?.type === 'it-office-3d:visible') { hiddenByHost = !e.data.visible; wake(); }
 });
 const source = new EventSource(eventsUrl());
-source.onopen = () => { connected = true; connection.textContent = ui.live; connection.dataset.state = 'live'; updateMission(); };
-source.onerror = () => { connected = false; connection.textContent = ui.offline; connection.dataset.state = 'offline'; updateMission(); };
 source.onmessage = (message) => {
   const next = JSON.parse(message.data);
   const plan = planWork(previous, next);
-  if (plan.reset) { lead.reset(); worked.clear(); handed.clear(); }
+  if (plan.reset) { lead.reset(); handed.clear(); }
   if (plan.first) {
     const session = activeSession(next);
     for (const role of ROLES) {
@@ -365,24 +306,9 @@ source.onmessage = (message) => {
   previous = plan.memory;
   snapshot = next;
   applyState();
-  updateTimer();
   if (selected) renderInspector();
   wake();
 };
-function updateTimer() {
-  const session = currentSession();
-  elapsed.textContent = session?.startedAt ? formatElapsed((session.endedAt ?? Date.now()) - session.startedAt) : '00:00';
-}
-setInterval(updateTimer, 250);
-reset.addEventListener('click', async () => {
-  reset.disabled = true;
-  try {
-    const response = await fetch('/reset', { method: 'POST' });
-    if (!response.ok) throw new Error('reset failed');
-  } catch {
-    missionDetail.textContent = tr('Reset failed. Please try again.', 'รีเซ็ตไม่สำเร็จ กรุณาลองใหม่');
-  } finally { reset.disabled = false; }
-});
 applyState();
 drawLead();
 wake();
