@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+- **More room for the office:** the top bar and the bottom task bar are gone; the office and team list use the full height.
+- **Task list:** each working teammate in the team list shows what they are doing now (tool or note, plus the file or command).
+- **Removed with the bars:** elapsed time, token counts, the connection indicator, the **Needs you** banner and the browser Reset button. VS Code still notifies when Claude waits for approval.
+- **Upgrade:** scene compatibility is now 5, so an older background server is replaced.
+
 ## 1.0.1
 - **Zoom and move the office:** scroll to zoom (up to 3×, toward the cursor), drag to move, double-click to reset. A drag that ends on a teammate does not open their activity.
 - **Upgrade:** scene compatibility is now 4, so an older background server is replaced and serves the new scene.

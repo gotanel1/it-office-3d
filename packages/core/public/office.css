@@ -13,7 +13,7 @@
 .office-mode [hidden] { display: none !important; }
 body.office-mode #pipeline { display: flex; }
 .office-mode button:focus-visible, .office-mode select:focus-visible { outline: 3px solid #2f8cbd; outline-offset: 3px; }
-.office-mode #pipeline { display: flex; position: absolute; top: 12px; bottom: 12px; left: 12px; width: 166px; max-width: none; transform: none; padding: 0; border: 1px solid #e7e8d6; border-radius: 5px; background: #eeefdf; flex-flow: column nowrap; align-items: stretch; justify-content: start; gap: 0; box-shadow: 0 4px 0 #07142166; overflow: hidden; }
+.office-mode #pipeline { display: flex; position: absolute; top: 12px; bottom: 12px; left: 12px; width: 220px; max-width: none; transform: none; padding: 0; border: 1px solid #e7e8d6; border-radius: 5px; background: #eeefdf; flex-flow: column nowrap; align-items: stretch; justify-content: start; gap: 0; box-shadow: 0 4px 0 #07142166; overflow: hidden; }
 .roster-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; background: #fffdf4; border-bottom: 1px solid #c0c5b4; font-size: 10px; letter-spacing: 1px; }
 .team-count { background: #293c38; color: #f5f6e9; padding: 2px 5px; border-radius: 3px; font-size: 9px; letter-spacing: 0; }
 .roster-list { padding: 7px; display: grid; gap: 5px; overflow: auto; min-height: 0; }
@@ -25,12 +25,13 @@ body.office-mode #pipeline { display: flex; }
 .sprite { display: block; width: 100%; aspect-ratio: 9 / 8; background: url('/assets/team-chibi-v1.png') no-repeat; background-size: 400% 300%; }
 .teammate-copy { display: grid; gap: 3px; min-width: 0; }
 .teammate-copy strong { font-size: 11px; }
-.role-status { color: #778173; font-size: 8px; text-transform: uppercase; letter-spacing: .4px; }
+.role-task { color: #34493f; font-size: 9px; line-height: 1.3; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.role-status { justify-self: start; color: #778173; font-size: 8px; text-transform: uppercase; letter-spacing: .4px; }
 .teammate[data-state='working'] .role-status { color: #fff; background: #327a6f; padding: 1px 4px; border-radius: 2px; }
 .teammate[data-state='done'] .role-status { color: #357955; }
 .teammate[data-state='failed'] .role-status { color: #b63e2f; font-weight: 700; }
 .roster-hint { margin: auto 0 0; padding: 10px; color: #70796d; font-size: 9px; line-height: 1.5; border-top: 1px solid #c6cbba; }
-.office-mode #scene { inset: 12px 12px 12px 190px; display: flex; align-items: center; justify-content: center; }
+.office-mode #scene { inset: 12px 12px 12px 244px; display: flex; align-items: center; justify-content: center; }
 .office-room { position: relative; width: min(100%, calc((100vh - 24px) * 1.5)); aspect-ratio: 3 / 2; flex-shrink: 0; container-type: inline-size; transform-origin: 0 0; }
 .office-mode #scene { overflow: hidden; touch-action: none; cursor: grab; }
 .office-mode #scene.dragging { cursor: grabbing; }
@@ -90,7 +91,7 @@ body.office-mode #pipeline { display: flex; }
 }
 @media (max-width: 540px) {
   .office-mode #pipeline { top: 10px; bottom: auto; right: 10px; width: auto; height: 72px; }
-  .roster-head, .roster-hint { display: none; }
+  .roster-head, .roster-hint, .role-task { display: none; }
   .roster-list { display: flex; overflow-x: auto; padding: 6px; gap: 6px; }
   .office-mode .teammate { min-width: 103px; min-height: 50px; }
   .office-mode #scene { inset: 92px 8px 8px; }

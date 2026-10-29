@@ -117,7 +117,9 @@ const workers = ROLES.map((role) => {
   portrait.append(sprite(role.index));
   const copy = node('span', 'teammate-copy');
   const status = node('span', 'role-status', ui.waiting);
-  copy.append(node('strong', '', role.label), status);
+  const task = node('span', 'role-task');
+  task.hidden = true;
+  copy.append(node('strong', '', role.label), status, task);
   row.append(portrait, copy);
   row.title = role.title;
   rosterList.append(row);
@@ -133,7 +135,7 @@ const workers = ROLES.map((role) => {
   ticket.hidden = true;
   actor.append(sprite(role.index), label, ticket);
   room.append(actor);
-  return { role, row, status, actor, label, ticket };
+  return { role, row, status, task, actor, label, ticket };
 });
 
 const pm = node('div', 'worker manager');
@@ -239,6 +241,8 @@ function applyState() {
     const state = r.state === 'working' ? 'working' : r.failed ? 'failed' : isFinished(r) ? 'done' : 'waiting';
     w.row.dataset.state = w.actor.dataset.state = state;
     w.status.textContent = ui[state];
+    w.task.textContent = state === 'working' ? [r.note ?? r.tool, r.detail].filter(Boolean).join(' · ') : '';
+    w.task.hidden = !w.task.textContent;
     w.label.textContent = `${w.role.label}${isFinished(r) ? ' ✓' : r.failed ? ' !' : ''}`;
     w.actor.setAttribute('aria-label', `${w.role.title} · ${ui[state]} · ${TEXT.showActivity}`);
     w.row.title = `${w.role.title} · ${summaryText(r)}`;

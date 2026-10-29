@@ -11,7 +11,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(here, '..', 'public');
 
 // `sceneApi` in package.json goes up when hooks or viewers need something an older server lacks
-// (2: sessions picked per folder; 3: the bundled 2.5D scene assets; 4: zoom and pan).
+// (2: sessions picked per folder; 3: the bundled 2.5D scene assets; 4: zoom and pan; 5: full-height layout with a task list).
 // Starters replace a running server whose number is lower so upgrades serve the new scene.
 export const API = JSON.parse(readFileSync(path.join(here, '..', 'package.json'), 'utf8')).sceneApi;
 
