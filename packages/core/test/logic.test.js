@@ -352,6 +352,10 @@ test('Antigravity hooks are reshaped and their tools find a desk', () => {
   assert.equal(roleForTool(write.tool, '', '', write.path), 'UX');
   assert.ok(!JSON.stringify(write).includes('SECRET'));
   assert.equal(roleForTool('view_file'), 'SA');
+  // Seen live from the Antigravity CLI: read_file with a quoted Path.
+  const cli = normalizeHook(fromAntigravity('PreToolUse', { ...common, toolCall: { name: 'read_file', args: { Path: '"C:\\work\\app\\package.json"' } } }));
+  assert.deepEqual([cli.path, roleForTool(cli.tool)], ['app/package.json', 'SA']);
+  assert.equal(roleForTool('edit_file', '', '', 'notes.md'), 'Writer');
   assert.equal(roleForTool('invoke_subagent', '', 'researcher'), 'SA');
 
   assert.equal(normalizeHook(fromAntigravity('PostToolUse', { ...common, toolCall: { name: 'run_command', args: {} }, error: 'SECRET' })).failed, true);
@@ -397,7 +401,8 @@ test('each AI gets its newest session in the shared office, or only the picked o
 test('connecting Antigravity keeps its other hooks and can be undone', () => {
   const other = { hooks: [{ type: 'command', command: 'lint.sh' }] };
   const ag = withHook({ 'my-linter': { PostToolUse: [other] } }, 'antigravity');
-  assert.match(ag['it-office-3d'].PreInvocation[0].hooks[0].command, /--agent antigravity --event PreInvocation$/);
+  assert.match(ag['it-office-3d'].PreInvocation[0].command, /--agent antigravity --event PreInvocation$/);
+  assert.match(ag['it-office-3d'].PreToolUse[0].hooks[0].command, /--agent antigravity --event PreToolUse$/);
   assert.deepEqual(ag['my-linter'], { PostToolUse: [other] });
   // Connecting twice does not add the hook twice; removing leaves only the user's own hooks.
   assert.deepEqual(withHook(ag, 'antigravity'), ag);

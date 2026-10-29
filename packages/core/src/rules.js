@@ -8,9 +8,9 @@ export const ROLES = ['BA', 'SA', 'Architect', 'UX', 'Dev', 'DBA', 'QA', 'DevOps
 // Codex reports shell calls as Bash and file edits as apply_patch; Antigravity uses its own snake_case names.
 export const SHELL_TOOLS = new Set(['Bash', 'PowerShell', 'run_command']);
 const READ_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'WebSearch', 'WebFetch', 'ToolSearch', 'Skill',
-  'view_file', 'list_dir', 'find_by_name', 'grep_search', 'search_web', 'read_url_content']);
+  'view_file', 'read_file', 'list_dir', 'find_by_name', 'grep_search', 'search_web', 'read_url_content', 'browser_subagent']);
 const WRITE_TOOLS = new Set(['Edit', 'MultiEdit', 'Write', 'NotebookEdit', 'apply_patch',
-  'write_to_file', 'replace_file_content', 'multi_replace_file_content']);
+  'write_to_file', 'replace_file_content', 'multi_replace_file_content', 'write_file', 'edit_file']);
 const PLAN_TOOLS = new Set(['EnterPlanMode', 'ExitPlanMode', 'TodoWrite', 'TaskCreate', 'TaskUpdate', 'update_plan', 'manage_task']);
 const ASK_TOOLS = new Set(['AskUserQuestion', 'ask_question', 'ask_permission']);
 const SUBAGENT_TOOLS = new Set(['Agent', 'Task', 'invoke_subagent']);

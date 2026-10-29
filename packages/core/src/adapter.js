@@ -92,7 +92,8 @@ export function fromAntigravity(event, raw) {
     tool_name: raw.toolCall?.name,
     tool_input: {
       command: args.CommandLine,
-      file_path: args.AbsolutePath ?? args.TargetFile,
+      // The CLI's read_file/write_file/edit_file send `Path`, sometimes wrapped in an extra pair of quotes.
+      file_path: args.AbsolutePath ?? args.TargetFile ?? (typeof args.Path === 'string' ? args.Path.replace(/^"|"$/g, '') : undefined),
       path: args.DirectoryPath ?? args.SearchPath ?? args.SearchDirectory,
       pattern: args.Pattern,
       query: args.Query ?? args.query,

@@ -20,8 +20,13 @@ export const TARGETS = {
   },
 };
 
-const command = (event) => `node "${hookScript}" --agent antigravity --event ${event}`;
-const ours = (group) => group?.hooks?.some((h) => String(h.command).includes(`--agent `) && String(h.command).includes('hook.mjs'));
+// Antigravity runs the command without a shell, so quotes would reach node as part of the path.
+// shortcut: a path with spaces cannot be passed this way, upgrade if someone clones into such a folder.
+const command = (event) => `node ${hookScript.replace(/\\/g, '/')} --agent antigravity --event ${event}`;
+const isOurs = (h) => String(h?.command).includes('--agent ') && String(h?.command).includes('hook.mjs');
+// Tool events wrap handlers in { matcher, hooks }; the other events list handlers directly.
+const ours = (entry) => isOurs(entry) || entry?.hooks?.some(isOurs);
+const TOOL_EVENTS = ['PreToolUse', 'PostToolUse'];
 
 // The config with this office's hook for `agent` added (or removed), leaving every other hook alone.
 export function withHook(config, agent, remove = false) {
@@ -29,7 +34,8 @@ export function withHook(config, agent, remove = false) {
   const table = (next[NAME] ??= {});
   for (const event of TARGETS[agent].events) {
     const groups = (table[event] ?? []).filter((g) => !ours(g));
-    if (!remove) groups.push({ hooks: [{ type: 'command', command: command(event), timeout: 10 }] });
+    const handler = { type: 'command', command: command(event), timeout: 10 };
+    if (!remove) groups.push(TOOL_EVENTS.includes(event) ? { hooks: [handler] } : handler);
     if (groups.length) table[event] = groups;
     else delete table[event];
   }
@@ -42,6 +48,10 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const remove = process.argv.includes('--remove');
   if (!TARGETS[agent]) {
     console.error('Usage: node scripts/connect.mjs antigravity [--remove]');
+    process.exit(1);
+  }
+  if (/\s/.test(hookScript)) {
+    console.error(`The repository path has a space (${hookScript}); Antigravity cannot run the hook from there.`);
     process.exit(1);
   }
   const { file } = TARGETS[agent];
