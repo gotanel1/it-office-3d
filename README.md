@@ -154,6 +154,17 @@ npm run demo
 
 On Windows you can also double-click `start-demo.bat`. It opens `http://127.0.0.1:3737/`.
 
+### Also watch Codex (GPT) and Antigravity
+
+The office shows all three AIs at once: Claude, GPT and Antigravity each have a lead who briefs their own AI's work, and the team list names the AI at each desk. From a clone of this repository, run once per AI:
+
+```
+node scripts/connect.mjs codex
+node scripts/connect.mjs antigravity
+```
+
+This adds the office hook to `~/.codex/hooks.json` or `~/.gemini/config/hooks.json`, keeps your other hooks, and saves the old file as `hooks.json.bak`. Codex asks you to approve new hooks with `/hooks` the first time. Add `--remove` to take the hook out again. Antigravity has no permission event, so its lead cannot show **Needs you**.
+
 ---
 
 ## 5. Your first test (do this once)

@@ -6,6 +6,7 @@ import path from 'node:path';
 import { roleForTool, roleForAgentType } from '../src/rules.js';
 import { normalizeHook, describeTool, fromAntigravity, patchFile } from '../src/adapter.js';
 import { createState, reduce, expireStale, STALE_WORKING_MS, activeFor, crewFor } from '../src/state.js';
+import { withHook } from '../../../scripts/connect.mjs';
 import { TranscriptTail, usageFromRecord, subtractUsage, isAllowedTranscriptPath } from '../src/transcript.js';
 
 test('tools map to the IT department desks', () => {
@@ -391,4 +392,20 @@ test('each AI gets its newest session in the shared office, or only the picked o
   assert.deepEqual(crewFor(s), { claude: 'c-new', codex: 'x1', antigravity: 'g1' });
   assert.deepEqual(crewFor(s, null, ['/w/app']), { claude: 'c-new', codex: 'x1' });
   assert.deepEqual(crewFor(s, 'x1'), { codex: 'x1' });
+});
+
+test('connecting Codex or Antigravity keeps their other hooks and can be undone', () => {
+  const other = { hooks: [{ type: 'command', command: 'lint.sh' }] };
+  const codex = withHook({ hooks: { Stop: [other] }, extra: 1 }, 'codex');
+  assert.equal(codex.extra, 1);
+  assert.equal(codex.hooks.Stop.length, 2);
+  assert.match(codex.hooks.PreToolUse[0].hooks[0].command, /hook\.mjs" --agent codex$/);
+  // Connecting twice does not add the hook twice; removing leaves only the user's own hooks.
+  assert.deepEqual(withHook(codex, 'codex'), codex);
+  assert.deepEqual(withHook(codex, 'codex', true), { hooks: { Stop: [other] }, extra: 1 });
+
+  const ag = withHook({ 'my-linter': { PostToolUse: [other] } }, 'antigravity');
+  assert.match(ag['it-office-3d'].PreInvocation[0].hooks[0].command, /--agent antigravity --event PreInvocation$/);
+  assert.deepEqual(ag['my-linter'], { PostToolUse: [other] });
+  assert.deepEqual(withHook(ag, 'antigravity', true), { 'my-linter': { PostToolUse: [other] } });
 });

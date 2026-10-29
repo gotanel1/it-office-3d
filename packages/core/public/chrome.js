@@ -60,13 +60,14 @@ const baseName = (p) => String(p ?? '').split(/[\\/]+/).filter(Boolean).pop() ??
 function sessionLabel(id, session) {
   const busy = Object.values(session.roles).some((r) => r.state === 'working');
   const folder = baseName(session.cwd) || 'session';
-  return `${busy ? '● ' : ''}${folder} · ${id.slice(0, 6)}`;
+  const ai = { codex: 'GPT', antigravity: 'Antigravity' }[session.agent] ?? 'Claude';
+  return `${busy ? '● ' : ''}${ai} · ${folder} · ${id.slice(0, 6)}`;
 }
 
 export function mountChrome() {
   const wrap = document.createElement('div');
   wrap.className = 'session-picker';
-  // Only shown when more than one Claude Code session is being watched.
+  // Only shown when more than one AI session is being watched.
   wrap.style.display = 'none';
 
   const sessionLabelEl = document.createElement('label');
@@ -95,7 +96,7 @@ export function mountChrome() {
 
     const ids = Object.keys(snap.sessions);
     const wanted = selectedSession();
-    const options = [['', 'Latest']].concat(ids.map((id) => [id, sessionLabel(id, snap.sessions[id])]));
+    const options = [['', 'All AIs']].concat(ids.map((id) => [id, sessionLabel(id, snap.sessions[id])]));
     const signature = JSON.stringify(options) + wanted;
     if (signature === lastOptions) return;
     lastOptions = signature;
