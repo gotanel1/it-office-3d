@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+- **Three AIs in one office:** Codex (GPT) and Antigravity now work next to Claude Code. Each AI has its own lead (Claude, GPT, Antigravity) who briefs only that AI's work, and the team list shows which AI is doing what at each desk.
+- **Session picker:** names the AI of each session. **All AIs** shows every AI at once; picking a session shows only that one.
+- **Codex:** install the office as a Codex plugin (`codex plugin marketplace add <repo>`, then `codex plugin add it-office-3d@it-office-3d`) and approve its hooks once with `/hooks`. Codex patches send only the file name, never their contents.
+- **Antigravity:** `node scripts/connect.mjs antigravity` adds the hook to `~/.gemini/config/hooks.json`, keeps your other hooks and saves a `.bak`; `--remove` takes it out. Antigravity has no permission event, so its lead cannot show **Needs you**.
+- **Upgrade:** scene compatibility is now 6, so an older background server is replaced.
+- **Validation:** 35 automated tests; live runs with Codex and the Antigravity CLI reached the office.
+
 ## 1.0.2
 - **More room for the office:** the top bar and the bottom task bar are gone; the office and team list use the full height.
 - **Task list:** each working teammate in the team list shows what they are doing now (tool or note, plus the file or command).
