@@ -162,7 +162,7 @@ npm run demo
 
 ออฟฟิศแสดง AI ทั้ง 3 ตัวพร้อมกัน: Claude, GPT และ Antigravity มีหัวหน้าของตัวเองที่เดินสั่งงานของ AI ตัวนั้น และรายชื่อทีมบอกว่า AI ตัวไหนใช้โต๊ะไหนอยู่ จากโฟลเดอร์ที่ clone รีโปนี้ไว้:
 
-**Codex** ติดตั้งออฟฟิศเป็น plugin ของ Codex แล้วเปิด `codex` พิมพ์ `/hooks` และอนุญาต hook ของ it-office-3d หนึ่งครั้ง:
+**Codex** ติดตั้งออฟฟิศเป็น plugin ของ Codex แล้วเปิด `codex` พิมพ์ `/hooks` event ไหนที่ตัวเลข **Active/Installed** ไม่เท่ากัน (เช่น `1/2`) แปลว่ามี hook รออนุมัติ กด **Enter** ที่ event นั้นแล้วอนุญาต hook ของ it-office-3d ทุกครั้งที่ office อัปเดต Codex จะให้อนุญาตใหม่:
 
 ```
 codex plugin marketplace add <ที่อยู่ของรีโปนี้>

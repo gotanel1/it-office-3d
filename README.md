@@ -158,7 +158,7 @@ On Windows you can also double-click `start-demo.bat`. It opens `http://127.0.0.
 
 The office shows all three AIs at once: Claude, GPT and Antigravity each have a lead who briefs their own AI's work, and the team list names the AI at each desk. From a clone of this repository:
 
-**Codex** installs the office as a Codex plugin. Then open `codex`, type `/hooks` and approve the it-office-3d hooks once:
+**Codex** installs the office as a Codex plugin. Then open `codex` and type `/hooks`: an event whose **Active/Installed** count is uneven (for example `1/2`) has a hook waiting; press **Enter** on it and approve the it-office-3d hook. Codex asks again after each update of the office:
 
 ```
 codex plugin marketplace add <path to this repository>
