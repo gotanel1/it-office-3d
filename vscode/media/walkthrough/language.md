@@ -1,6 +1,6 @@
 ## Language
 
-The setting **IT-Office-3D: Language** picks the language of the speech bubbles and the wall screen:
+The setting **IT-Office-3D: Language** picks the language of the office interface and speech bubbles:
 
 - **auto** (default): Thai when VS Code is in Thai, English otherwise
 - **en**: English

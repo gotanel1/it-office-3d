@@ -11,7 +11,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(here, '..', 'public');
 
 // `sceneApi` in package.json goes up when hooks or viewers need something an older server lacks
-// (2: sessions picked per folder). Starters replace a running server whose number is lower.
+// (2: sessions picked per folder; 3: the bundled 2.5D scene assets).
+// Starters replace a running server whose number is lower so upgrades serve the new scene.
 export const API = JSON.parse(readFileSync(path.join(here, '..', 'package.json'), 'utf8')).sceneApi;
 
 const MAX_BODY_BYTES = 256 * 1024;
@@ -23,6 +24,7 @@ const TYPES = {
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',
+  '.png': 'image/png',
 };
 
 // Binds to 127.0.0.1 only. Port 0 lets the OS pick a free port.

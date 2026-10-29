@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { API } from '../packages/core/src/server.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ito3d-home-'));
@@ -25,11 +26,11 @@ const alive = (pid) => {
   }
 };
 
-// 1. An "old" server: answers /health without an api number, like versions before sceneApi existed.
+// 1. A v0.5.0-era server advertises API 2; v1 must replace it to serve the new scene.
 fs.mkdirSync(dataDir, { recursive: true });
 const old = spawn(process.execPath, ['-e', `
   const http = require('node:http');
-  const s = http.createServer((q, r) => r.end(JSON.stringify({ ok: true, name: 'claude-code-3d', pid: process.pid, port: s.address().port })));
+  const s = http.createServer((q, r) => r.end(JSON.stringify({ ok: true, name: 'claude-code-3d', api: 2, pid: process.pid, port: s.address().port })));
   s.listen(0, '127.0.0.1', () => require('node:fs').writeFileSync(process.argv[1], JSON.stringify({ pid: process.pid, port: s.address().port, url: 'http://127.0.0.1:' + s.address().port + '/' })));
 `, path.join(dataDir, 'server.json')], { stdio: 'ignore' });
 for (let i = 0; i < 50 && !fs.existsSync(path.join(dataDir, 'server.json')); i++) await new Promise((r) => setTimeout(r, 100));
@@ -39,7 +40,7 @@ const opened = run('open.mjs');
 assert.equal(opened.status, 0, opened.stdout + opened.stderr);
 const info = readInfo();
 assert.notEqual(info.pid, old.pid, 'the old server was not replaced');
-assert.equal((await get(info.port, '/health')).api >= 2, true);
+assert.equal((await get(info.port, '/health')).api, API);
 await new Promise((r) => setTimeout(r, 500));
 assert.equal(alive(old.pid), false, 'the old server is still running');
 

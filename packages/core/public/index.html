@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Claude Code 3D</title>
+  <title>IT-Office-3D</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/style.css">
   <script type="importmap">
@@ -27,10 +27,18 @@
   <script type="module">
     import { mountChrome } from '/chrome.js';
 
-    // ?embed: the VS Code extension shows status and reset itself, so the page keeps only the scene.
+    // ?embed: VS Code provides its own reset; the classic renderer also hides its HUD.
     document.body.classList.toggle('embed', new URLSearchParams(location.search).has('embed'));
+    const classic = new URLSearchParams(location.search).get('view') === '3d';
+    if (!classic) {
+      const style = document.createElement('link');
+      style.rel = 'stylesheet';
+      style.href = '/office.css';
+      document.head.append(style);
+      document.body.classList.add('office-mode');
+    }
     mountChrome();
-    await import('/app.js');
+    await import(classic ? '/app.js' : '/office.js');
   </script>
 </body>
 </html>

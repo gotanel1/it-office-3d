@@ -3,13 +3,13 @@
   "owner": {
     "name": "kob ai"
   },
-  "description": "A live 3D view of your Claude Code session.",
+  "description": "A cozy 2.5D view of your Claude Code session.",
   "plugins": [
     {
       "name": "it-office-3d",
       "source": ".",
-      "description": "Watch what Claude Code is doing as a live 3D scene. Local only, read only.",
-      "version": "0.4.0",
+      "description": "Watch Claude Code work in a cozy 2.5D office. Local only, read only.",
+      "version": "1.0.0",
       "category": "monitoring",
       "tags": [
         "visualization",

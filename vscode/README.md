@@ -1,19 +1,19 @@
 # IT-Office-3D for VS Code
 
-Shows the IT-Office-3D scene inside VS Code, so you do not need a browser.
+Watch Claude Code work in a cozy 2.5D office inside VS Code. Version 1.0.0 introduces a fixed-camera room, eleven chibi characters and a redesigned interface, with the same local activity tracking.
 
-![The IT department office](https://raw.githubusercontent.com/gotanel1/it-office-3d/main/docs/images/demo.gif)
+![The IT department office](https://raw.githubusercontent.com/gotanel1/it-office-3d/v1.0.0/docs/images/office25d-preview.png)
 
 - **Panel:** an **IT-Office-3D** tab sits next to Terminal and Problems. Drag it to the sidebar if you prefer it there.
 - **Status bar:** shows who is working on what (`Dev · Edit`), or the token total when the turn ends. Hover for the busy desks, the time and the tokens; click to open the panel.
 - **Sessions:** each window follows the newest Claude Code chat in its own workspace folders. Use **Choose Session** on the panel toolbar to pin one chat instead.
-- **Wall screen:** the busy desk, Claude's summary of the call, the file or command, and the time. It turns amber when Claude waits for your approval.
+- **Team roster and task panel:** select any of the ten roles to inspect its activity. The task panel shows the busy desk, Claude's summary, the file or command, and turns amber when Claude waits for approval.
 - **Desk activity:** click a desk tag to list what it did in this task; **Open** shows a file in the editor. Failed calls are marked red.
 - **Notifications:** when Claude finishes or needs your approval, while VS Code is in the background (setting **IT-Office-3D: Notify**).
 - **Language:** English or Thai, by default the same as VS Code (setting **IT-Office-3D: Language**).
 - **Toolbar on the panel:** choose the session, reset the view.
 - **Command Palette:** `IT-Office-3D: Open`, `Choose Session`, `Reset`, `Show Diagnostics`, `Install Claude Code Plugin`.
-- **Light on your computer:** the scene stops drawing while the panel is hidden and slows down when nobody is working.
+- **Light on your computer:** the default scene uses local images without WebGL, pauses animation when hidden, and respects reduced motion.
 
 The scene moves only when the **IT-Office-3D plugin** is installed in Claude Code, because the plugin's hooks are what report Claude's work. Install it once from a terminal:
 
@@ -48,7 +48,7 @@ For editors without the VS Code Marketplace (Cursor, Antigravity), download the 
 cd vscode
 npm test
 npm run package
-code --install-extension claude-code-3d-0.3.2.vsix
+code --install-extension claude-code-3d-1.0.0.vsix
 ```
 
 ## Release a new version

@@ -1,6 +1,6 @@
 // Shows the IT-Office-3D scene inside VS Code instead of a browser.
-// The scene is the same local page the plugin serves, shown in a panel view with only the 3D scene;
-// status and reset live in VS Code's own UI. Events still come from the plugin's hooks.
+// The scene is the same local page the plugin serves, with its team roster and task panel;
+// reset also lives in VS Code's own UI. Events still come from the plugin's hooks.
 const vscode = require('vscode');
 const fs = require('node:fs');
 const os = require('node:os');

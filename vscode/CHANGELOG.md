@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0
+- **A new cozy office:** fixed-camera 2.5D artwork, a warm wood interior, city windows, plants and a lounge, with GPT-generated local assets.
+- **Eleven chibi characters:** the original ten IT roles plus a PM who walks between desks and briefs teammates using the existing work transitions.
+- **Redesigned interface:** selectable team roster, activity inspector, current-task panel, elapsed time and token counters. Thai and English are supported.
+- **Same workflow:** hooks, role classification, sessions, token accounting, approval notices, failure status, file-opening restrictions and extension commands retain their existing behavior.
+- **Responsive and lightweight:** no WebGL needed for the default scene, layouts for compact panels and mobile browsers, reduced-motion support and paused animation when hidden. The original renderer remains accessible with `?view=3d`.
+- **Upgrade:** extension, Claude Code plugin and core are version 1.0.0. Scene compatibility is now 3 so an older background server is replaced and serves the new assets; its in-memory task counters restart once. Claude Code work is unaffected.
+- **Validation:** 44 automated tests, the plugin upgrade/hook smoke test and browser checks for the new interface passed before release.
+- **Install:** download `claude-code-3d-1.0.0.vsix` and choose **Extensions: Install from VSIX...**. VS Code Marketplace publication is handled separately by the maintainer.
+
 ## 0.5.0
 - **Waiting for you:** when Claude asks for permission, the wall screen turns amber, the PM raises a hand and the status bar shows **Needs you**.
 - **Failures:** a tool call that fails marks its desk red (tag, desk light, task board, status bar). The error text itself is never kept.

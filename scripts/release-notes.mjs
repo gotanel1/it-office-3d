@@ -10,4 +10,4 @@ if (!entry) {
 }
 console.log(`${entry.slice(version.length).trim()}
 
-In VS Code, install or update from the Extensions view (search **IT-Office-3D**). For Cursor, Antigravity and other editors, download the \`.vsix\` below and run **Extensions: Install from VSIX...**.`);
+Download the \`.vsix\` below and run **Extensions: Install from VSIX...** in VS Code, Cursor, Antigravity or another compatible editor. VS Code Marketplace publication is a separate manual step by the maintainer.`);

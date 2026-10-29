@@ -1,8 +1,8 @@
 {
   "name": "claude-code-3d",
-  "version": "0.1.0",
-  "sceneApi": 2,
-  "description": "3D office that shows what Claude Code is doing in real time",
+  "version": "1.0.0",
+  "sceneApi": 3,
+  "description": "Cozy 2.5D office that shows what Claude Code is doing in real time",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -12,7 +12,7 @@
   "scripts": {
     "start": "node src/cli.js",
     "demo": "node scripts/demo.js",
-    "test": "node --test test/logic.test.js test/server.test.js",
+    "test": "node --test test/logic.test.js test/server.test.js test/office.test.js",
     "vendor": "node scripts/vendor.mjs"
   },
   "devDependencies": {

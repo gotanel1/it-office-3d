@@ -1,15 +1,15 @@
 # IT-Office-3D
 
-**Watch what Claude Code is doing as a live 3D scene.**
+**Watch what Claude Code is doing in a cozy 2.5D office.**
 A whole IT department of chibi characters (BA, SA, architect, UX/UI, developer, DBA, QA, DevOps, security and a tech writer) gets work handed out by a PM who walks between the desks, while a timer and a token counter run along the bottom.
 
 Local only. Read only. Nothing leaves your computer. Free, MIT licensed. Created by kob ai.
 
 [ภาษาไทย (Thai)](README.th.md)
 
-![The IT department office at work](docs/images/demo.gif)
+![The IT department office at work](docs/images/office25d-preview.png)
 
-The speech bubbles and the wall screen are in English or Thai (VS Code setting **IT-Office-3D: Language**, or `?lang=en` / `?lang=th` in the browser). Tool names, files and commands are always shown as Claude wrote them.
+Version **1.0.0** adds GPT-generated local artwork, a fixed-camera room, a selectable team roster and an activity inspector. The interface and speech bubbles are in English or Thai (VS Code setting **IT-Office-3D: Language**, or `?lang=en` / `?lang=th` in the browser). Tool names, files and commands are always shown as Claude wrote them. See [the new scene and validation](docs/office-25d.md).
 
 ---
 
@@ -77,7 +77,7 @@ You need all of these. Each line shows how to check.
 | **Claude Code**, signed in and working | `claude --version` prints a version (tested with 2.1.269) | Install it from the official Claude Code documentation |
 | **Node.js 18 or newer** | `node --version` prints `v18` or higher | Install the LTS version from https://nodejs.org |
 | **git** | `git --version` prints a version | Install from https://git-scm.com. Claude Code uses it to download plugins |
-| A **web browser** with WebGL | Any recent Chrome, Edge, Firefox or Safari. Chrome and Edge were tested | Update your browser, or turn on hardware acceleration in its settings |
+| A modern **web browser** | Chrome, Edge, Firefox or Safari. The 1.0.0 browser checks use Chrome | Update your browser. The default 2.5D scene does not need WebGL |
 
 You do **not** need a GitHub account, an npm account, or any key.
 
@@ -210,13 +210,13 @@ Tools that match no desk (a brand-new tool, for example) leave the architect **T
 
 ### The PM
 
-The PM stands by the task board. Whenever someone gets new work the PM walks along the corridor between the rows to them, hands over a task card and a speech bubble shows what the work is and a short detail (a file name, a command, a search pattern). If many events arrive faster than the PM can walk, the PM keeps the three newest and skips older ones. That is by design: the colours and tags always show the true state, the PM is the storyteller.
+The PM waits beside the desks. Whenever someone gets new work the PM walks along the corridor between the rows to them, hands over a task card and a speech bubble shows what the work is and a short detail (a file name, a command, a search pattern). If many events arrive faster than the PM can walk, the PM keeps the three newest and skips older ones. That is by design: the colours and tags always show the true state, the PM is the storyteller.
 
 ### The panels
 
-- **Top bar**: all ten desks in order with each one's state.
-- **Name tags** above each person: the current tool.
-- **Task board** on the wall: all ten desks with a status chip.
+- **Team roster**: all ten desks with each one's state; select a teammate to inspect its activity.
+- **Name tags** below each person: the role and completion/failure marker.
+- **Current task** panel: the current tool, Claude's summary, and approval or completion status.
 - **Elapsed**: time since you pressed Enter on the current prompt. It stops when Claude finishes.
 - **Tokens in / out**: for the *current task only*. "In" is new input plus cache-write tokens; "out" is the reply. Hover over the number for the breakdown including cache reads. It shows `—` until Claude has finished at least one message, or if the numbers cannot be read.
 - **Reset** clears the picture. It does not touch Claude Code.
@@ -224,7 +224,7 @@ The PM stands by the task board. Whenever someone gets new work the PM walks alo
 ### Controls
 
 - **Session** box (appears when you have two or more Claude Code conversations open): choose which one to watch. Conversations are never mixed. "Latest" follows whichever one moved last.
-- **Drag** to turn the camera, **scroll** to zoom, **double-click** to reset the view.
+- The default scene has a fixed camera. Click a teammate or name tag for activity and press **Escape** to close the inspector. The original rotatable 3D view remains available with `?view=3d`.
 
 ---
 
@@ -286,7 +286,7 @@ Find your symptom in the left column.
 | Page says **"This site can't be reached"** / "refused to connect" | The server is not running. It starts when a Claude Code conversation starts (and when you run the open command) | Start a new Claude conversation, send a message, then reload. Check `node --version` is 18 or higher. You can also run the open program by hand: `node ~/.claude/plugins/cache/it-office-3d/it-office-3d/<version>/scripts/open.mjs` |
 | `http://127.0.0.1:3737/debug/events` shows `[]` after you sent a message | The plugin did not send events | Same fixes as "nothing moves". Then try debug mode below |
 | The **port 3737 is busy** (another program uses it) | The server picks a free port by itself | Open `~/.claude-code-3d/server.json`, read the `port` number, and use `http://127.0.0.1:<port>/`. The open command also prints the right address |
-| The scene is **black or blank** | WebGL is off, or the page is still loading (the first load takes a second or two) | Wait a few seconds. Try another browser. Turn on hardware acceleration in your browser settings |
+| The scene is **black or blank** | The page or local artwork has not loaded | Wait a few seconds and reload. Check diagnostics and the local server URL. Only the optional `?view=3d` renderer requires WebGL |
 | **Tokens show `—`** | Claude has not finished a message yet, or the log format was not recognised | Wait for the first reply to finish. The plugin never fails because of this; it just shows `—` |
 | A person looks **stuck on "Working"** | The turn was interrupted before the tool reported back | It clears when the turn ends, or after ten minutes without events |
 | The lead seems to **lag behind** | Walking takes time; tools are often faster | Normal. The panels and colours are always current |
@@ -353,7 +353,7 @@ Yes. Use the **Session** box to choose which one to watch.
 One task is one prompt you send, from pressing Enter until Claude finishes that turn.
 
 **Why are the speech bubbles in Thai?**
-The project was made in Thailand. The tool names and file names under each bubble are in English. Translating the bubbles is a small change: they are the `PHRASES` and `DESK_PHRASES` tables in `packages/core/public/app.js`. Contributions are welcome.
+Select English or Thai with the language setting or URL parameter. The original dialogue is in `packages/core/public/office-data.js`; interface labels are in `office.js`. Tool names and paths stay as Claude wrote them.
 
 **Can I change which desk gets which tool?**
 Yes. The rules are short lists in `packages/core/src/rules.js`, with tests in `packages/core/test/logic.test.js`.
@@ -437,7 +437,7 @@ The first should return JSON containing `"name":"claude-code-3d"`. The second li
 ┌────────────┐  hook event   ┌────────────┐  POST /hook   ┌───────────────────┐  live stream  ┌───────────┐
 │ a tool     │ ────────────► │ hook.mjs   │ ────────────► │ local server      │ ────────────► │ browser   │
 │ starts or  │  (async, JSON │ trims the  │  127.0.0.1    │ (Node.js)         │ (SSE)         │ 3D scene  │
-│ ends, turn │   on stdin)   │ event      │               │ keeps the state   │               │ (three.js)│
+│ ends, turn │   on stdin)   │ event      │               │ keeps the state   │               │ (2.5D UI)│
 │ ends       │               └────────────┘               │ reads token usage │               └───────────┘
 └────────────┘                                            └───────────────────┘
         │  transcript file (usage numbers only)  ▲
@@ -481,13 +481,13 @@ commands/office.md  the /it-office-3d:office command
 scripts/            hook program, open program, shared helpers
 packages/core/
   src/              server, adapter, state machine, transcript reader, daemon
-  public/           the web page, the office scene (app.js), and vendor/ (three.js copies)
+  public/           the 2.5D scene (office.js), generated assets, and optional classic 3D view
   test/             automated tests
 docs/images/        screenshots used in this README
 ```
 
-- **No install step for users.** The few three.js files the scene needs are committed in `packages/core/public/vendor/`. After changing the three.js version run `npm install` and `npm run vendor` inside `packages/core`.
-- **Adding a desk.** Add its id to `ROLES` and a rule in `packages/core/src/rules.js`, then add the person (look, colour) to `ROLES` in `packages/core/public/app.js`. Two rows of five fit the room; more desks need a new layout.
+- **No install step for users.** The 2.5D images are in `packages/core/public/assets/`. The optional classic renderer uses three.js files committed in `packages/core/public/vendor/`. After changing the three.js version run `npm install` and `npm run vendor` inside `packages/core`.
+- **Adding a desk.** Add its id to `ROLES` and a rule in `packages/core/src/rules.js`, then update `ROLES` in `packages/core/public/office-data.js`, the sprite atlas and the layout in `office-model.js`. Two rows of five fit the generated room; more desks need new artwork and layout.
 - **Releasing a change.** Bump `version` in `.claude-plugin/plugin.json` and in `.claude-plugin/marketplace.json`, run the tests and the two validate commands, commit and push. People get it with `claude plugin marketplace update` and `claude plugin update`.
 - **Tests** cover the role mapping, privacy trimming on the server side, token counting (including duplicate messages), the host and origin checks, and path safety. Please add one when you fix a bug.
 
@@ -511,4 +511,4 @@ Bug reports and pull requests are welcome. Please do not paste private data into
 
 MIT license (see [LICENSE](LICENSE)). Created by kob ai.
 
-Built with [three.js](https://threejs.org/) (MIT), copied into `packages/core/public/vendor/` together with its license file.
+The optional classic renderer uses [three.js](https://threejs.org/) (MIT), copied into `packages/core/public/vendor/` together with its license file.
