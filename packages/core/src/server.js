@@ -11,7 +11,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(here, '..', 'public');
 
 // `sceneApi` in package.json goes up when hooks or viewers need something an older server lacks
-// (2: sessions picked per folder; 3: the bundled 2.5D scene assets; 4: zoom and pan; 5: full-height layout with a task list; 6: several AIs at once; 7: /hook/<agent> for hooks without Node.js).
+// (2: sessions picked per folder; 3: the bundled 2.5D scene assets; 4: zoom and pan; 5: full-height layout with a task list; 6: several AIs at once; 7: /hook/<agent> for hooks without Node.js; 9: replaces the unreleased 1.4.0 server, which used 8).
 // Starters replace a running server whose number is lower so upgrades serve the new scene.
 export const API = JSON.parse(readFileSync(path.join(here, '..', 'package.json'), 'utf8')).sceneApi;
 

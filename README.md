@@ -249,7 +249,7 @@ The PM waits beside the desks. Whenever someone gets new work the PM walks along
 
 ## 7. Privacy and safety
 
-**In one sentence:** everything stays on your computer, the plugin only watches, and it never sends your prompts or your file contents anywhere, not even to its own server.
+**In one sentence:** everything stays on your computer, the office only watches, and the hook hands what the AI reports to the office server on `127.0.0.1`, which keeps only a few short fields and never stores your prompts or your file contents.
 
 ### What is sent where
 
@@ -260,7 +260,7 @@ Claude Code ──(hook, on your machine)──► small local web server ──
 
 There is no network traffic to any other address.
 
-### What the hook forwards (and nothing else)
+### What the server keeps (and nothing else)
 
 - the event name (for example "tool started")
 - the conversation id, the working folder, and the path of Claude's own log file
@@ -268,9 +268,9 @@ There is no network traffic to any other address.
 - a few short fields of the tool input: a shell command, a file path, a search pattern, a web address, or a search query
 - the one-line description Claude writes for a shell command or a sub-agent (for example "Run the core test suite"). The scene shows it as what the desk is doing. A sub-agent's full instructions are not forwarded
 
-Each text is cut to 300 characters before it leaves the hook, and the server keeps shorter versions: file paths show only their last two parts, commands only their first 120 characters, descriptions their first 100.
+The hook passes the AI's whole hook input to the server on `127.0.0.1`; the server reads it in memory, keeps only the fields above and discards the rest at once. It keeps short versions: file paths show only their last two parts, commands only their first 120 characters, descriptions their first 100.
 
-### What is never forwarded or stored
+### What is never stored or shown
 
 - **your prompts**
 - **the contents of files** Claude reads or writes

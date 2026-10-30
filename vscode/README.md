@@ -60,7 +60,7 @@ For editors without the VS Code Marketplace (Cursor, Antigravity), download the 
 cd vscode
 npm test
 npm run package
-code --install-extension claude-code-3d-1.3.0.vsix
+code --install-extension claude-code-3d-1.3.1.vsix
 ```
 
 ## Release a new version

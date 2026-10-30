@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1
+- **Privacy notes corrected:** since 1.3.0 the hook hands the AI's input to the local server on `127.0.0.1`, which keeps only a few short fields and discards the rest in memory; README and SECURITY now say so.
+- **Upgrade:** scene compatibility is now 9, so a server from the unreleased 1.4.0 test build is replaced. No other changes from 1.3.0.
+
 ## 1.3.0
 - **No Node.js needed:** the hooks only use `curl` (built into Windows 10+, macOS and Linux): `sh hook.sh` for Claude Code, and on Windows a `curl.exe` call for Codex and Antigravity. The local server now trims each hook input to what the scene needs, as the old Node.js hook did, so prompts, file contents and tool output are still never kept.
 - **Antigravity connects from VS Code itself:** Connect AIs writes its hook directly, and an older hook is updated when VS Code starts.
